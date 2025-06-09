@@ -12,27 +12,29 @@ class Patient extends Model
     // If your table name isn’t the plural of the class name, set it explicitly:
     protected $table = 'patients';
 
-    // If your primary key column isn’t "id", set it explicitly:
+    use Notifiable;
+
+    // Tell Eloquent the primary key is 'patient_id'
     protected $primaryKey = 'patient_id';
 
-    // Disable auto-incrementing if your PK is not an integer autoincrement:
-    // public $incrementing = false;
-    // protected $keyType = 'string';
+    // If you don’t have created_at/updated_at, disable timestamps.
+    public $timestamps = true; 
+    // (You already have created_at and updated_at, so leave true.)
 
-    // If you want Eloquent to maintain created_at / updated_at:
-    public $timestamps = true;
+    // Cast primary key to int:
+    protected $keyType = 'int';
+    public $incrementing = true;
 
-    // Which columns are mass-assignable
     protected $fillable = [
         'patient_first_name',
         'patient_last_name',
         'patient_birthday',
+        'civil_status',
         'email',
         'phone_number',
-        'profile_picture',
-        'civil_status',
         'address',
-        'city',
+        'password',
+        // if you add city / zip to table, include them here
     ];
 
     // Cast columns to appropriate PHP types
