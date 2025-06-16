@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
@@ -7,48 +8,61 @@ use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
 {
+    /**
+     * Show the login form (or kick out an already-logged-in user).
+     */
     public function showLoginForm()
     {
+        //  ⬇ Kick authenticated users to their panel instead of showing /login
+        if (Auth::guard('admin')->check()) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        if ($user = Auth::guard('web')->user()) {
+            return $user->role === 'admission'
+                ? redirect()->route('admission.dashboard')
+                : redirect()->route('pharmacy.dashboard');
+        }
+
+        //  ⬇ No one logged in → show the form
         return view('auth.login');
     }
 
-    /**
-     * Handle the POST /login
-     */
-    public function login(Request $request)
-    {
-        $credentials = $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required',
-        ]);
+  public function login(Request $request)
+{
+    $credentials = $request->validate([
+        'email'    => 'required|email',
+        'password' => 'required',
+    ]);
+    $remember = $request->boolean('remember');
 
-        $remember = $request->boolean('remember');
-
-        /* ---------- 1. web guard (users table) ---------- */
-        if (Auth::guard('web')->attempt($credentials, $remember)) {
-            $request->session()->regenerate();
-            return redirect()->intended(route('dashboard'));
-        }
-
-        /* ---------- 2. admin guard (admins table) ---------- */
-        if (Auth::guard('admin')->attempt($credentials, $remember)) {
-            $request->session()->regenerate();
-            // land directly on the admin dashboard
-            return redirect()->intended(route('admin.dashboard'));
-        }
-
-        /* ---------- 3. fail ---------- */
-        return back()->withErrors([
-            'email' => 'These credentials do not match our records.',
-        ])->onlyInput('email');
+    // 1️⃣ Try admin guard first
+    if (Auth::guard('admin')->attempt($credentials, $remember)) {
+        $request->session()->regenerate();
+        return redirect()->route('admin.dashboard');
     }
 
+    // 2️⃣ Then try web guard (users table)
+    if (Auth::guard('web')->attempt($credentials, $remember)) {
+        $request->session()->regenerate();
+        $user = Auth::guard('web')->user();
+        return $user->role === 'admission'
+             ? redirect()->route('admission.dashboard')
+             : redirect()->route('pharmacy.dashboard');
+    }
+
+    // 3️⃣ Fail
+    return back()
+        ->withErrors(['email' => 'These credentials do not match our records.'])
+        ->onlyInput('email');
+}
+
+
     /**
-     * POST /logout  (logs out whichever guard is active)
+     * POST /logout : sign out whichever guard is active.
      */
     public function logout(Request $request)
     {
-        // log out of both, just in case
         Auth::guard('web')->logout();
         Auth::guard('admin')->logout();
 

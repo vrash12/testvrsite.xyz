@@ -19,7 +19,7 @@
       Patient Details:
       {{ $patient->patient_first_name }} {{ $patient->patient_last_name }}
     </h2>
-    <a href="{{ route('patients.index') }}" class="btn btn-secondary">
+   <a href="{{ route('admission.patients.index') }}" class="btn btn-secondary">
       ← Back to Patients
     </a>
   </div>

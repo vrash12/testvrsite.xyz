@@ -18,8 +18,8 @@
         </div>
       @endif
 
-      <form method="POST" action="{{ route('login') }}">
-        @csrf
+    <form method="POST" action="{{ route('login.attempt') }}">
+    @csrf
 
         <div class="mb-3">
           <label>Email address</label>

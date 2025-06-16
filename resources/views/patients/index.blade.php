@@ -1,12 +1,12 @@
+{{--resources/views/patients/index.blade.php--}}
+
 @extends('layouts.admission') {{-- assumes you have an admission‐layout with sidebar, etc. --}}
 
 @section('content')
 <div class="container-fluid">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="text-primary">All Patients</h2>
-    <a href="{{ route('patients.create') }}" class="btn btn-primary">
-      <i class="fas fa-user-plus"></i> Add Patient
-    </a>
+<a href="{{ route('admission.patients.create') }}" class="btn btn-primary">
   </div>
 
   @if(session('success'))
@@ -31,10 +31,11 @@
         <td>{{ $patient->patient_birthday?->format('M d, Y') }}</td>
         <td>{{ ucfirst($patient->status) }}</td>
         <td>
-          <a href="{{ route('patients.show', $patient) }}"
+        <a href="{{ route('admission.patients.show', $patient) }}"
              class="btn btn-sm btn-primary">
-            View
-          </a>
+           View
+         </a>
+
         </td>
       </tr>
     @endforeach

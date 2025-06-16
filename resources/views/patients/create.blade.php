@@ -29,7 +29,7 @@
       </div>
     @endif
 
-    <form method="POST" action="{{ route('patients.store') }}" novalidate>
+   <form method="POST" action="{{ route('admission.patients.store') }}" novalidate>
       @csrf
 
       {{-- Nav Tabs --}}
@@ -377,7 +377,8 @@
               <button type="button" class="btn btn-secondary step-prev" data-current="billing" data-prev="admission">
                 Previous
               </button>
-              <button type="submit" class="btn btn-success">Save All Details</button>
+        <button type="submit" class="btn btn-success">Save All Details</button>
+
             </div>
           </div>
         </div>
