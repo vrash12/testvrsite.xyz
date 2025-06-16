@@ -1,22 +1,13 @@
 <?php
+
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ServiceAssignment extends Model
+class PaymentMethod extends Model
 {
-    use HasFactory;
-
-    protected $fillable = ['patient_id', 'doctor_id', 'service_status'];
-
-    public function patient()
-    {
-        return $this->belongsTo(Patient::class);
-    }
-
-    public function doctor()
-    {
-        return $this->belongsTo(Doctor::class);
-    }
+    protected $table      = 'payment_methods';
+    protected $primaryKey = 'payment_method_id';
+    public $timestamps    = true;
+    protected $fillable   = ['name'];
 }

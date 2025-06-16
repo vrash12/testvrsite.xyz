@@ -1,11 +1,16 @@
 <?php
-namespace App\Http\Controllers;
+
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admission\AdmissionController;
-use App\Http\Controllers\PatientController;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\AdmissionController;
+use App\Http\Controllers\PatientController;
+use App\Http\Controllers\PharmacyController;
+use App\Http\Controllers\MedicineController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminUsersController;
 
-
+/* Public landing + default login */
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Auth::routes([
@@ -14,25 +19,54 @@ Auth::routes([
     'verify'   => false,
 ]);
 
-Route::get('/dashboard', fn() => redirect()->route('admission.dashboard'))
-     ->middleware('auth')
-     ->name('dashboard');
+/* Redirect /dashboard based on role */
+Route::get('/dashboard', function() {
+    $user = Auth::user();
+    if ($user->role === 'admin') {
+        return redirect()->route('admin.dashboard');
+    }
+    if ($user->role === 'admission') {
+        return redirect()->route('admission.dashboard');
+    }
+    if ($user->role === 'pharmacy') {
+        return redirect()->route('pharmacy.dashboard');
+    }
+    return redirect()->route('home');
+})->middleware('auth')->name('dashboard');
 
-Route::get('/admission/dashboard', [AdmissionController::class, 'index'])
-     ->middleware(['auth','role:admission'])
-     ->name('admission.dashboard');
 
-// ⬇︎ BELOW: PatientController for Admission users ⬇︎
-Route::middleware(['auth','role:admission'])->group(function () {
-    // List all patients
-    Route::get('patients', [PatientController::class, 'index'])
-         ->name('patients.index');
+/* Admission panel (guard=web + role=admission) */
+Route::middleware(['auth','role:admission'])
+     ->prefix('admission')
+     ->name('admission.')
+     ->group(function () {
+         Route::get('dashboard', [AdmissionController::class,'dashboard'])
+              ->name('dashboard');
+         Route::resource('patients', PatientController::class)
+              ->only(['index','create','store','show']);
+     });
 
-    // “New Patient” form
-    Route::get('patients/create', [PatientController::class, 'create'])
-         ->name('patients.create');
 
-    // Handle submission of “New Patient”
-    Route::post('patients', [PatientController::class, 'store'])
-         ->name('patients.store');
-});
+/* Pharmacy panel (guard=web + role=pharmacy) */
+Route::middleware(['auth','role:pharmacy'])
+     ->prefix('pharmacy')
+     ->name('pharmacy.')
+     ->group(function () {
+         Route::get('dashboard', [PharmacyController::class,'index'])
+              ->name('dashboard');
+         // charges, medicines etc...
+         Route::resource('medicines', MedicineController::class);
+     });
+
+
+Route::middleware('auth:admin')
+     ->prefix('admin')
+     ->name('admin.')
+     ->group(function(){
+         Route::get('dashboard', [AdminController::class,'dashboard'])
+              ->name('dashboard');
+         Route::resource('users', AdminUsersController::class);
+         Route::post('logout', [AdminController::class,'logout'])
+              ->name('logout');
+     });
+

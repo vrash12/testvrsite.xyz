@@ -3,35 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MedicalDetail extends Model
 {
-    use HasFactory;
+    protected $table      = 'medical_details';
+    protected $primaryKey = 'medical_id';
+    public $timestamps    = true;
+    protected $guarded    = [];    // all fields mass-assignable
 
-    protected $table = 'medical_details';
+   protected $casts = [
+    'medical_history'   => 'array',
+    'allergies'         => 'array',
+    'created_at'        => 'datetime',
+    'updated_at'        => 'datetime',
+];
 
-    protected $fillable = [
-        'patient_id',
-        'primary_reason',
-        'temperature',
-        'blood_pressure',
-        'weight',
-        'height',
-        'heart_rate',
-        'medical_history',        // stored as JSON
-        'other_medical_history',
-        'allergies',              // stored as JSON
-        'other_allergies',
-    ];
-
-    protected $casts = [
-        'medical_history' => 'array',
-        'allergies'       => 'array',
-    ];
-
-    public function patient()
+    public function patient(): BelongsTo
     {
-        return $this->belongsTo(Patient::class, 'patient_id', 'patient_id');
+        return $this->belongsTo(Patient::class, 'patient_id');
     }
 }

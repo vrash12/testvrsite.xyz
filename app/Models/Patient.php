@@ -4,6 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Auth;
+use App\Models\MedicalDetail;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Patient extends Model
 {
@@ -11,6 +17,7 @@ class Patient extends Model
 
     // If your table name isn’t the plural of the class name, set it explicitly:
     protected $table = 'patients';
+    protected $guarded    = [];    
 
     use Notifiable;
 
@@ -42,28 +49,25 @@ class Patient extends Model
         'patient_birthday' => 'date',
     ];
 
-    /**
-     * One-to-one: a patient has one set of medical details.
-     */
-    public function medicalDetails()
+  public function medicalDetail(): HasOne
     {
-        return $this->hasOne(MedicalDetail::class, 'patient_id', 'patient_id');
+        return $this->hasOne(MedicalDetail::class, 'patient_id');
     }
 
     /**
      * One-to-one: a patient has one admission record.
      */
-    public function admissionDetails()
+    public function admissionDetail(): HasOne
     {
-        return $this->hasOne(AdmissionDetail::class, 'patient_id', 'patient_id');
+        return $this->hasOne(AdmissionDetail::class, 'patient_id');
     }
 
     /**
      * One-to-one: a patient has one billing information record.
      */
-    public function billingInformation()
+    public function billingInformation(): HasOne
     {
-        return $this->hasOne(BillingInformation::class, 'patient_id', 'patient_id');
+        return $this->hasOne(BillingInformation::class, 'patient_id');
     }
 
     public function dashboard()
@@ -81,5 +85,10 @@ class Patient extends Model
         $assignedDoctors = DoctorAssignment::where('patient_id', $patient->id)->get();
 
         return view('patient.dashboard', compact('patient', 'prescriptions', 'schedules', 'assignedDoctors'));
+    }
+
+    public function bills()
+    {
+        return $this->hasMany(Bill::class,'patient_id');
     }
 }

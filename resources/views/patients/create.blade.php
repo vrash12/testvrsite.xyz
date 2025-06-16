@@ -29,58 +29,34 @@
       </div>
     @endif
 
-    <form method="POST" action="{{ route('patients.store') }}">
+    <form method="POST" action="{{ route('patients.store') }}" novalidate>
       @csrf
 
       {{-- Nav Tabs --}}
       <ul class="nav nav-tabs mb-3" id="patientTabs" role="tablist">
         <li class="nav-item" role="presentation">
-          <button
-            class="nav-link active"
-            id="personal-tab"
-            data-bs-toggle="tab"
-            data-bs-target="#personal"
-            type="button"
-            role="tab"
-            aria-controls="personal"
-            aria-selected="true"
-          >Personal Information</button>
+          <button class="nav-link active" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal"
+                  type="button" role="tab" aria-controls="personal" aria-selected="true">
+            Personal Information
+          </button>
         </li>
         <li class="nav-item" role="presentation">
-          <button
-            class="nav-link"
-            id="medical-tab"
-            data-bs-toggle="tab"
-            data-bs-target="#medical"
-            type="button"
-            role="tab"
-            aria-controls="medical"
-            aria-selected="false"
-          >Medical Details</button>
+          <button class="nav-link" id="medical-tab" data-bs-toggle="tab" data-bs-target="#medical"
+                  type="button" role="tab" aria-controls="medical" aria-selected="false">
+            Medical Details
+          </button>
         </li>
         <li class="nav-item" role="presentation">
-          <button
-            class="nav-link"
-            id="admission-tab"
-            data-bs-toggle="tab"
-            data-bs-target="#admission"
-            type="button"
-            role="tab"
-            aria-controls="admission"
-            aria-selected="false"
-          >Admission Details</button>
+          <button class="nav-link" id="admission-tab" data-bs-toggle="tab" data-bs-target="#admission"
+                  type="button" role="tab" aria-controls="admission" aria-selected="false">
+            Admission Details
+          </button>
         </li>
         <li class="nav-item" role="presentation">
-          <button
-            class="nav-link"
-            id="billing-tab"
-            data-bs-toggle="tab"
-            data-bs-target="#billing"
-            type="button"
-            role="tab"
-            aria-controls="billing"
-            aria-selected="false"
-          >Billing Details</button>
+          <button class="nav-link" id="billing-tab" data-bs-toggle="tab" data-bs-target="#billing"
+                  type="button" role="tab" aria-controls="billing" aria-selected="false">
+            Billing Details
+          </button>
         </li>
       </ul>
 
@@ -93,25 +69,31 @@
               <div class="row g-3">
                 <div class="col-md-4">
                   <label class="form-label">First Name <span class="text-danger">*</span></label>
-                  <input type="text" name="patient_first_name" value="{{ old('patient_first_name') }}"
-                         class="form-control @error('patient_first_name') is-invalid @enderror" required>
+                  <input type="text" name="patient_first_name"
+                         value="{{ old('patient_first_name') }}"
+                         class="form-control @error('patient_first_name') is-invalid @enderror"
+                         required>
                   @error('patient_first_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                   <label class="form-label">Last Name <span class="text-danger">*</span></label>
-                  <input type="text" name="patient_last_name" value="{{ old('patient_last_name') }}"
-                         class="form-control @error('patient_last_name') is-invalid @enderror" required>
+                  <input type="text" name="patient_last_name"
+                         value="{{ old('patient_last_name') }}"
+                         class="form-control @error('patient_last_name') is-invalid @enderror"
+                         required>
                   @error('patient_last_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                   <label class="form-label">Birthday</label>
-                  <input type="date" name="patient_birthday" value="{{ old('patient_birthday') }}"
+                  <input type="date" name="patient_birthday"
+                         value="{{ old('patient_birthday') }}"
                          class="form-control @error('patient_birthday') is-invalid @enderror">
                   @error('patient_birthday')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                   <label class="form-label">Civil Status</label>
-                  <input type="text" name="civil_status" value="{{ old('civil_status') }}"
+                  <input type="text" name="civil_status"
+                         value="{{ old('civil_status') }}"
                          class="form-control @error('civil_status') is-invalid @enderror"
                          placeholder="e.g. Single, Married">
                   @error('civil_status')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -120,17 +102,12 @@
                   <label class="form-label">Phone Number</label>
                   <div class="input-group">
                     <span class="input-group-text">(+63)</span>
-                    <input type="text" name="phone_number" value="{{ old('phone_number') }}"
+                    <input type="text" name="phone_number"
+                           value="{{ old('phone_number') }}"
                            class="form-control @error('phone_number') is-invalid @enderror"
                            placeholder="9XXXXXXXXX">
                   </div>
                   @error('phone_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Email Address</label>
-                  <input type="email" name="email" value="{{ old('email') }}"
-                         class="form-control @error('email') is-invalid @enderror">
-                  @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-12">
                   <label class="form-label">Address</label>
@@ -139,20 +116,16 @@
                             placeholder="Street, Barangay, City, Zip Code">{{ old('address') }}</textarea>
                   @error('address')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
-                <div class="col-md-4">
-                  <label class="form-label">Password <span class="text-danger">*</span></label>
-                  <input type="password" name="password"
-                         class="form-control @error('password') is-invalid @enderror" required>
-                  @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Confirm Password</label>
-                  <input type="password" name="password_confirmation" class="form-control" required>
-                </div>
+              </div>
+
+              {{-- Info about credentials --}}
+              <div class="alert alert-info mt-4">
+                <strong>Note:</strong> Email and password will be autogenerated and displayed after saving.
               </div>
             </div>
             <div class="card-footer text-end">
-              <button type="button" class="btn btn-primary step-next" data-current="personal" data-next="medical">
+              <button type="button" class="btn btn-primary step-next"
+                      data-current="personal" data-next="medical">
                 Next
               </button>
             </div>
@@ -408,6 +381,8 @@
             </div>
           </div>
         </div>
+
+
       </div>
     </form>
 
@@ -416,7 +391,6 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-   
     document.querySelectorAll('.step-next').forEach(btn => {
       btn.addEventListener('click', () => {
         const cur = btn.dataset.current;
@@ -425,7 +399,7 @@
         new bootstrap.Tab(document.getElementById(nxt + '-tab')).show();
       });
     });
-  
+
     document.querySelectorAll('.step-prev').forEach(btn => {
       btn.addEventListener('click', () => {
         const prev = btn.dataset.prev;

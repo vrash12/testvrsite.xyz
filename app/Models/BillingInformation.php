@@ -3,42 +3,27 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BillingInformation extends Model
 {
-    use HasFactory;
+    protected $table      = 'billing_information';
+    protected $primaryKey = 'billing_info_id';
+    public $timestamps    = true;
+    protected $guarded    = [];    // all fields mass-assignable
 
-    protected $table = 'billing_information'; 
-    // if your table is named billing_informations, adjust accordingly
-
-    protected $fillable = [
-        'patient_id',
-        'payment_method_id',
-        'insurance_provider_id',
-        'policy_number',
-        'group_number',
-        'billing_contact_name',
-        'billing_contact_phone',
-        'billing_address',
-        'billing_city',
-        'billing_state',
-        'billing_zip',
-        'billing_notes',
-    ];
-
-    public function patient()
+    public function patient(): BelongsTo
     {
-        return $this->belongsTo(Patient::class, 'patient_id', 'patient_id');
+        return $this->belongsTo(Patient::class, 'patient_id');
     }
 
-    public function paymentMethod()
+    public function paymentMethod(): BelongsTo
     {
-        return $this->belongsTo(PaymentMethod::class, 'payment_method_id', 'payment_method_id');
+        return $this->belongsTo(PaymentMethod::class, 'payment_method_id');
     }
 
-    public function insuranceProvider()
+    public function insuranceProvider(): BelongsTo
     {
-        return $this->belongsTo(InsuranceProvider::class, 'insurance_provider_id', 'insurance_provider_id');
+        return $this->belongsTo(InsuranceProvider::class, 'insurance_provider_id');
     }
 }

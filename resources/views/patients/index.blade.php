@@ -14,34 +14,31 @@
   @endif
 
   <table class="table table-striped">
-    <thead>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Name</th>
+      <th>Birthday</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    @foreach($patients as $patient)
       <tr>
-        <th>#</th>
-        <th>Last Name</th>
-        <th>First Name</th>
-        <th>Birthday</th>
-        <th>Email</th>
-        <th>Phone</th>
-        <th>Actions</th>
+        <td>{{ $patient->patient_id }}</td>
+        <td>{{ $patient->patient_first_name }} {{ $patient->patient_last_name }}</td>
+        <td>{{ $patient->patient_birthday?->format('M d, Y') }}</td>
+        <td>{{ ucfirst($patient->status) }}</td>
+        <td>
+          <a href="{{ route('patients.show', $patient) }}"
+             class="btn btn-sm btn-primary">
+            View
+          </a>
+        </td>
       </tr>
-    </thead>
-    <tbody>
-      @foreach($patients as $patient)
-        <tr>
-          <td>{{ $patient->patient_id }}</td>
-          <td>{{ $patient->patient_last_name }}</td>
-          <td>{{ $patient->patient_first_name }}</td>
-          <td>{{ optional($patient->patient_birthday)->format('Y-m-d') }}</td>
-          <td>{{ $patient->email }}</td>
-          <td>{{ $patient->phone_number }}</td>
-          <td>
-            {{-- You could add Edit/View buttons here --}}
-            <a href="#" class="btn btn-sm btn-outline-secondary">View</a>
-            <a href="#" class="btn btn-sm btn-outline-warning">Edit</a>
-          </td>
-        </tr>
-      @endforeach
-    </tbody>
+    @endforeach
+  </tbody>
   </table>
 </div>
 @endsection
