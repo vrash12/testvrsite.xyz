@@ -2,12 +2,21 @@
 @extends('layouts.app')
 
 @section('content')
+
+  <div class="container-fluid bg-secondary px-20" style="margin-top:80px; padding: 30px 45px;">
+    <h1 class="fs-1">Billing</h1>
+    <h3 class="fs-2">Module</h3>
+    <p>Access your Billing Information using the billing portal</p>
+  </div>
+
 <div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-6">
+  <div class="row justify-content-center g-4">
+    
+    {{-- Login Panel --}}
+    <div class="col-md-5 border rounded p-4">
       <h2 class="mb-4 text-center">Login to PatientCare</h2>
 
-      {{-- Display validation errors (if any) --}}
+      {{-- Validation errors --}}
       @if($errors->any())
         <div class="alert alert-danger">
           <ul class="mb-0">
@@ -18,8 +27,8 @@
         </div>
       @endif
 
-    <form method="POST" action="{{ route('login.attempt') }}">
-    @csrf
+      <form method="POST" action="{{ route('login.attempt') }}">
+        @csrf
 
         <div class="mb-3">
           <label>Email address</label>
@@ -62,6 +71,21 @@
         <button type="submit" class="btn btn-primary w-100">Login</button>
       </form>
     </div>
+
+    {{-- Instructions Panel --}}
+    <div class="col-md-5 border rounded p-4 bg-white">
+      <h3 class="text-center">Instructions for Using PatientCare Portal</h3>
+      <ol class="list-group list-group-numbered mt-3">
+        <li class="list-group-item">Go to admission department and get admitted.</li>
+        <li class="list-group-item">Register email at admission.</li>
+        <li class="list-group-item">Check your email.</li>
+        <li class="list-group-item">Login to the portal.</li>
+        <li class="list-group-item">View your bill.</li>
+        <li class="list-group-item">Stay updated.</li>
+        <li class="list-group-item">Bootstrap is killing me.</li>
+      </ol>
+    </div>
+
   </div>
 </div>
 @endsection
