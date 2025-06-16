@@ -8,7 +8,7 @@
         <div
           class="position-absolute top-0 start-0 w-100 h-100"
           style="
-            background: url('{{ asset('images/hero-hospital.jpg') }}') center center no-repeat;
+            background: url('{{ asset('images/hero-bg.png') }}') center center no-repeat;
             background-size: cover;
             filter: brightness(0.6);
             z-index: 0;
@@ -30,11 +30,6 @@
                 </div>
                 <div class="col-lg-6 d-none d-lg-flex justify-content-center">
                     {{-- Optional: A transparent version of your logo or illustration --}}
-                    <img src="{{ asset('images/patientcare-logo-white.png') }}"
-                         alt="PatientCare Logo"
-                         class="img-fluid"
-                         style="max-width: 80%;"
-                    >
                 </div>
             </div>
         </div>

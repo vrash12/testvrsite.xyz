@@ -22,73 +22,74 @@
 </head>
 <body>
   {{-- ===== Navbar ===== --}}
-  <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
-    <div class="container">
-      <a class="navbar-brand d-flex align-items-center" href="{{ route('home') }}">
-        <img
-          src="{{ asset('images/logo.png') }}"
-          alt="PatientCare Logo"
-          style="height:30px; margin-right:8px;"
-        >
-        <span class="fw-bold">PatientCare</span>
-      </a>
-      <button
-        class="navbar-toggler"
-        type="button"
-        data-bs-toggle="collapse"
-        data-bs-target="#navbarSupportedContent"
-        aria-controls="navbarSupportedContent"
-        aria-expanded="false"
-        aria-label="Toggle navigation"
+  <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3 fixed-top">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="{{ route('home') }}">
+      <img
+        src="{{ asset('images/pc-b.png') }}"
+        alt="PatientCare Logo"
+        style="height:40px; margin-right:8px;"
       >
-        <span class="navbar-toggler-icon"></span>
-      </button>
+      <span class="fw-bold text-primary">PatientCare</span>
+    </a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
 
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
-          <li class="nav-item">
-            <a class="nav-link active" href="{{ route('home') }}">Home</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#services">Services</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#contact">Contact Us</a>
-          </li>
-          <li class="nav-item">
-            @guest
-              <a class="btn btn-primary ms-3" href="{{ route('login') }}">
-                LOGIN
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
+        <li class="nav-item">
+          <a class="nav-link text-primary fw-bold" href="{{ route('home') }}">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#services">Services</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#contact">Contact Us</a>
+        </li>
+        <li class="nav-item">
+          @guest
+            <a class="btn btn-primary ms-3" href="{{ route('login') }}">
+              LOGIN
+            </a>
+          @else
+            @if(Auth::guard('admin')->check())
+              <a
+                class="btn btn-outline-secondary ms-3"
+                href="{{ route('admin.dashboard') }}"
+              >
+                <i class="fa fa-user-shield"></i> Admin Panel
               </a>
-            @else
-              @if(Auth::guard('admin')->check())
-                <a
-                  class="btn btn-outline-secondary ms-3"
-                  href="{{ route('admin.dashboard') }}"
-                >
-                  <i class="fa fa-user-shield"></i> Admin Panel
-                </a>
-              @elseif(auth()->user()->role === 'admission')
-                <a
-                  class="btn btn-outline-secondary ms-3"
-                  href="{{ route('admission.dashboard') }}"
-                >
-                  <i class="fa fa-hospital-user"></i> Admission Panel
-                </a>
-              @elseif(auth()->user()->role === 'pharmacy')
-                <a
-                  class="btn btn-outline-secondary ms-3"
-                  href="{{ route('pharmacy.dashboard') }}"
-                >
-                  <i class="fa fa-prescription-bottle-medical"></i> Pharmacy Panel
-                </a>
-              @endif
-            @endguest
-          </li>
-        </ul>
-      </div>
+            @elseif(auth()->user()->role === 'admission')
+              <a
+                class="btn btn-outline-secondary ms-3"
+                href="{{ route('admission.dashboard') }}"
+              >
+                <i class="fa fa-hospital-user"></i> Admission Panel
+              </a>
+            @elseif(auth()->user()->role === 'pharmacy')
+              <a
+                class="btn btn-outline-secondary ms-3"
+                href="{{ route('pharmacy.dashboard') }}"
+              >
+                <i class="fa fa-prescription-bottle-medical"></i> Pharmacy Panel
+              </a>
+            @endif
+          @endguest
+        </li>
+      </ul>
     </div>
-  </nav>
+  </div>
+</nav>
+
 
   {{-- ===== Page Content ===== --}}
   <main>
