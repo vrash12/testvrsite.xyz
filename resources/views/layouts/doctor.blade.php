@@ -18,10 +18,10 @@
     </head>
     <body>
         <aside class="sidebar">
-            <div class="top-part">
+            <div class="top-section">
                 <img src="{{ asset('images/patientcare-logo-white.png') }}" alt="Logo" class="logo">
                 <div class="avatar"></div>
-                <div class="name" >{{ Auth::user()->username ?? "Physician User"}}</div>
+                <div class="name">{{ Auth::user()->username ?? "Physician User"}}</div>
                 <div class="id-label">Physician ID: {{Auth::id()}}</div>
             </div>
 
@@ -38,7 +38,7 @@
                         </a>
                     </li>
                     <li>
-                        <form action="POST" action="{{ route('logout') }}">
+                        <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit" class="btn text-white w-100 text-start" style="background:none; border:none">
                                 <i class="fas fa-sign-out-alt"></i>Logout

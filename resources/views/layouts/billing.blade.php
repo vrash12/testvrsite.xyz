@@ -2,46 +2,62 @@
 
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Billing Panel • PatientCare</title>
-</head>
-<body>
-    <aside class="sidebar">
-        <div class="top-part">
-            <img src=" {{ assset('images/patientcare-logo-white.png') }}" alt="Logo">
-            <div class="avatar"></div>
-            <div class="name">{{ Auth::user()->username ?? 'Billing Staff'}}</div>
-            <div class="id-label">{{ Auth::id() }}</div>
-        </div>
-        <nav>
-            <li>
-                <a href="{{ route('') }}"></a>
-            </li>
-            <li>
-                <a href="{{ route('') }}"></a>
-            </li>
-            <li>
-                <a href="{{ route('') }}"></a>
-            </li>
-            <li>
-                <a href="{{ route('') }}"></a>
-            </li>
-        </nav>
-        <div class="footer">
-            PatientCare © {{ date('Y') }}<br>
-            Version 1.0.0
-        </div>
-    </aside>
- 
-    <main class="main-content">
-        @yield('content')
-    </main>
+    <head>
+        
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>Billing Panel • PatientCare</title>
 
-{{-- Bootstrap JS --}}
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        {{-- Bootstrap 5 --}}
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        {{-- Font Awesome --}}
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+        {{-- CSS --}}
+        @vite('resources/css/app.css')
+
+    </head>
+    <body>
+        <aside class="sidebar">
+            <div class="top-section">
+                <img src=" {{ asset('images/patientcare-logo-white.png') }}" alt="Logo" class="logo">
+                <div class="avatar"></div>
+                <div class="name">{{ Auth::user()->username ?? 'Billing Staff'}}</div>
+                <div class="id-label">{{ Auth::id() }}</div>
+            </div>
+            <nav>
+                <li>
+                    <a href="{{ route('') }}"></a>
+                </li>
+                <li>
+                    <a href="{{ route('') }}"></a>
+                </li>
+                <li>
+                    <a href="{{ route('') }}"></a>
+                </li>
+                <li>
+                    <a href="{{ route('') }}"></a>
+                </li>
+                <li>
+                    <form method="POST" action="{{ route('logout') }}">
+                        <button type="submit" class="btn text-white w-100 text-start" style="background: none; border:none;">
+                            <i class="fas fa-sign-out-alt"></i>Logout
+                        </button>
+                    </form>
+                </li>
+            </nav>
+            <div class="footer">
+                PatientCare © {{ date('Y') }}<br>
+                Version 1.0.0
+            </div>
+        </aside>
     
-</body>
+        <main class="main-content">
+            @yield('content')
+        </main>
+
+    {{-- Bootstrap JS --}}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        
+    </body>
 </html>
