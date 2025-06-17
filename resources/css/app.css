@@ -2,9 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* SIDEBAR | START */
+
 body { 
     margin:0; 
     padding:0; 
     height:100vh; 
     overflow:hidden; 
 }
+
+/* END */
