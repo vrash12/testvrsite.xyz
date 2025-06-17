@@ -21,7 +21,7 @@
                 <div class="col-lg-6 text-white">
                     <h1 class="display-4 fw-bold">Welcome to PatientCare</h1>
                     <p class="lead mt-3">
-                        PatientCare Portal gives you complete access to your healthcare information, billing, and services in one secure place.
+                        PatientCare is a patient-first billing portal designed to make hospital billing simpler, clearer, and fairer. built by people, for the people.
                     </p>
                     <a href="#services" class="btn btn-primary btn-lg mt-4">
                         Read More &nbsp;

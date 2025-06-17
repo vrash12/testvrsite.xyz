@@ -10,10 +10,12 @@
   </div>
 
 <div class="container mt-5">
-  <div class="row justify-content-center g-4">
+
+  <div class="row justify-content-center sm:m-5">
     
     {{-- Login Panel --}}
-    <div class="col-md-5 border rounded p-4">
+    <div class="col-lg-4 col-md-6 col-sm-6 border rounded p-4">
+
       <h2 class="mb-4 text-center">Login to PatientCare</h2>
 
       {{-- Validation errors --}}
@@ -73,7 +75,7 @@
     </div>
 
     {{-- Instructions Panel --}}
-    <div class="col-md-5 border rounded p-4 bg-white">
+    <div class="col-lg-4 col-md-6 col-sm-6 bg-white border px-2 py-5">
       <h3 class="text-center">Instructions for Using PatientCare Portal</h3>
       <ol class="list-group list-group-numbered mt-3">
         <li class="list-group-item">Go to admission department and get admitted.</li>

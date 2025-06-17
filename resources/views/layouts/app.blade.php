@@ -11,8 +11,7 @@
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
     rel="stylesheet"
   >
-  {{-- Your custom CSS --}}
-  <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+
 
   {{-- Font Awesome --}}
   <link
