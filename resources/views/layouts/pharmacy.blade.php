@@ -1,70 +1,82 @@
 {{-- resources/views/layouts/pharmacy.blade.php --}}
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Pharmacy • PatientCare</title>
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>Pharmacy • PatientCare</title>
 
-    {{-- Bootstrap 5 --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    {{-- Font Awesome --}}
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    {{-- CSS --}}
-    @vite('resources/css/app.css')
+      {{-- Bootstrap 5 --}}
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+      {{-- Font Awesome --}}
+      <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+      {{-- CSS --}}
+      <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+  </head>
 
-</head>
-<body>
-  <aside class="sidebar">
-    <div class="top-section">
-      <img src="{{ asset('images/patientcare-logo-white.png') }}" alt="Logo" class="logo">
-      <div class="avatar"></div>
-      <div class="name">{{ Auth::user()->username ?? 'Pharmacist User' }}</div>
-      <div class="id-label">Pharmacist ID no. {{ Auth::id() }}</div>
+  <body>
+
+    {{-- Page --}}
+    <div class="d-flex">
+
+      {{-- Sidebar --}}
+      <aside class="sidebar bg-primary text-white p-3 vh-100">
+
+          {{-- Top --}}
+          <div class="text-center mb-4">
+              <img src="{{ asset('images/patientcare-logo-white.png') }}" class="logo img-fluid mt-2 mb-4" alt="Logo">
+              <div class="avatar rounded-circle mx-auto mb-2"></div>
+              <strong>{{ Auth::user()->username ?? 'Pharmacist User' }}</strong><br>
+              <small>Pharmacist ID: {{ Auth::id() }}</small>
+          </div>
+
+          {{-- List Routes --}}
+          <nav class="nav flex-column sidebar-nav ms-2 mt-4">
+
+              <a href="{{ route('pharmacy.dashboard') }}"
+                 class="nav-link d-flex align-items-center text-white {{ request()->routeIs('pharmacy.dashboard') ? 'active' : '' }}">
+                  <i class="fas fa-home fa-xl me-3"></i>
+                  <span>Home</span>
+              </a>
+
+              <a href="{{ route('pharmacy.medicines.index') }}"
+                 class="nav-link d-flex align-items-center text-white 
+                 {{ request()->routeIs('pharmacy.medicines.*') ? 'active' : '' }}">
+                  <i class="fas fa-medkit fa-xl me-3"></i>
+                  <span>Medicines</span>
+              </a>
+
+              <a href="{{ route('pharmacy.medicines.create') }}"
+                 class="nav-link d-flex align-items-center text-white 
+                 {{ request()->routeIs('pharmacy.medicine.create') ? 'active' : '' }}">
+                  <i class="fas fa-pills fa-xl me-3"></i>
+                  <span>New Medication Charge</span>
+              </a>
+
+          </nav>
+
+          {{-- Bottom --}}
+          <div class="footer text-center mt-auto pt-4">
+              <form method="POST" action="{{ route('logout') }}">
+                  @csrf
+                  <button type="submit" class="btn btn-sm btn-outline-light w-100 text-start p-2">
+                      <i class="fas fa-sign-out-alt fa-xl me-2"></i> Logout
+                  </button>
+              </form>
+              <small class="d-block mt-3">PatientCare © {{ date('Y') }}</small>
+              <sup>V1.0.0</sup>
+          </div>
+
+      </aside>
+
+      {{-- Content Placeholder --}}
+      <main class="flex-grow-1 p-4">
+          @yield('content')
+      </main>
+
     </div>
 
-    <nav>
-      <ul>
-        <li>
-          <a href="{{ route('pharmacy.dashboard') }}">
-            <i class="fas fa-home"></i> Home
-          </a>
-        </li>
-       <li>
-         <a href="{{ route('pharmacy.medicines.index') }}">
-           <i class="fas fa-medkit"></i> Medicines
-         </a>
-       </li>
-        <li>
-          <a href="{{ route('pharmacy.charges.create') }}">
-            <i class="fas fa-pills"></i> New Medication Charge
-          </a>
-        </li>
-        <li>
-          <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button type="submit"
-                    class="btn text-white w-100 text-start"
-                    style="background:none; border:none;">
-              <i class="fas fa-sign-out-alt"></i> Logout
-            </button>
-          </form>
-        </li>
-      </ul>
-    </nav>
-
-    <div class="footer">
-      PatientCare © {{ date('Y') }}<br>
-      Version 1.0.0
-    </div>
-  </aside>
-
-  <main class="main-content">
-    @yield('content')
-  </main>
-
-  {{-- Bootstrap JS --}}
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+    {{-- Bootstrap JS --}}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
 </html>

@@ -1,64 +1,75 @@
 {{--resources/views/layouts/admin.blade.php--}}
+
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Admin • PatientCare</title>
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>Admin • PatientCare</title>
 
-    {{-- Bootstrap 5 --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    {{-- Font Awesome --}}
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    {{-- CCS --}}
-    @vite('resources/css/app.css')
+      {{-- Bootstrap 5 --}}
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+      {{-- Font Awesome --}}
+      <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+      {{-- CCS --}}
+      <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+  </head>
+  <body>
 
-  </style>
-</head>
-<body>
-  <aside class="sidebar">
-    <div class="top-section">
-      <img src="{{ asset('images/patientcare-logo-white.png') }}" alt="Logo" class="logo">
-      <div class="avatar"></div>
-      <div class="name">{{ Auth::user()->username ?? 'Admin User' }}</div>
-      <div class="id-label">User ID: {{ Auth::id() }}</div>
-    </div>
+      {{-- Page --}}
+      <div class="d-flex">
 
-    <nav>
-      <ul>
-        <li>
-          <a href="{{ route('admin.dashboard') }}"
-             class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-            <i class="fas fa-tachometer-alt"></i> Dashboard
-          </a>
-        </li>
-        <li>
-          <a href="{{ route('admin.users.index') }}"
-             class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
-            <i class="fas fa-users"></i> Manage Users
-          </a>
-        </li>
-      </ul>
-    </nav>
+          {{-- Sidebar --}}
+          <aside class="sidebar bg-primary text-white p-3 vh-100 ">
 
-    <div class="footer">
-      <form method="POST" action="{{ route('admin.logout') }}">
-        @csrf
-        <button type="submit" class="btn btn-link text-danger w-100 text-start">
-          <i class="fas fa-sign-out-alt"></i> Logout
-        </button>
-      </form>
-      PatientCare © {{ date('Y') }}<br>
-      Version 1.0.0
-    </div>
-  </aside>
+              {{-- Top --}}
+              <div class="text-center mb-6">
+                  <img src="{{ asset('images/patientcare-logo-white.png') }}" class="logo img-fluid mt-2 mb-4" alt="logo">
+                  <div class="avatar rounded-circle mx-auto mb-2 "></div>
+                  <strong>{{ Auth::user()-> username ?? 'Admin User' }}</strong><br>
+                  <small>Admin ID: {{ Auth::id() }}</small>
+              </div>
 
-  <main class="main-content">
-    @yield('content')
-  </main>
+              {{-- List Routes --}}
+              <nav class="nav flex-column mb-auto sidebar-nav ms-2 mt-4">
+                 <a href="{{route('admin.dashboard')}}" class="nav-link d-flex align-items-center text-white 
+                          {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                   <i class="fa-solid fa-gauge fa-xl me-3"></i>
+                   <span>Dashboard</span>
+                  </a>
 
-  {{-- Bootstrap JS --}}
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+                  <a href="{{route('admin.users.index')}}" class="nav-link d-flex align-items-center text-white 
+                          {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                   <i class="fas fa-users fa-xl me-3"></i>
+                   <span>Manage Users</span>
+                  </a>
+               </nav>
+
+              {{-- Bottom --}}
+              <div class="footer text-center">
+                  <div class="mt-auto text-center small pt-3 mb-4">
+                      <form method="POST" action="{{ route('logout') }}">
+                         @csrf
+                          <button type="submit" class="btn btn-sm btn-outline-light w-100 text-start p-2">
+                              <i class="fas fa-sign-out-alt fa-xl me-2"></i> Logout
+                          </button>
+                      </form>
+                   </div>
+                  <small class="mt-">PatientCare © {{ date('Y') }}</small>
+                  <suP>V1.0.0</suP>
+                </div>
+            </aside>
+
+            {{-- Content Placeholder --}}
+            <main class="flex-grow-1 p-4">
+                @yield('content')
+            </main>
+
+        </div>
+
+        {{-- Bootstrap JS --}}
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    </body>
 </html>
  

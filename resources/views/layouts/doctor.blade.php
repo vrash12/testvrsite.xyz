@@ -1,5 +1,4 @@
 {{-- resources/views/layouts/doctor.blade.php --}}
-
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -13,53 +12,61 @@
         {{-- Font Awesome --}}
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
         {{-- CSS --}}
-        @vite('resources/css/app.css')
-
+        <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+        
     </head>
     <body>
-        <aside class="sidebar">
-            <div class="top-section">
-                <img src="{{ asset('images/patientcare-logo-white.png') }}" alt="Logo" class="logo">
-                <div class="avatar"></div>
-                <div class="name">{{ Auth::user()->username ?? "Physician User"}}</div>
-                <div class="id-label">Physician ID: {{Auth::id()}}</div>
+
+    <div class="d-flex">
+
+        {{-- Sidebar --}}
+        <aside class="sidebar bg-primary text-white p-3 vh-100">
+
+            {{-- Top --}}
+            <div class="text-center mb-4">
+                <img src="{{ asset('images/patientcare-logo-white.png') }}" alt="Logo" class="logo img-fluid mt-2 mb-4">
+                <div class="avatar rounded-circle mx-auto mb-2"></div>
+                <strong>{{ Auth::user()->username ?? 'Physician User' }}</strong><br>
+                <small>Physician ID: {{ Auth::id() }}</small>
             </div>
 
-            <nav>
-                <ul>
-                    <li>
-                        <a href="{{ route('doctor.dashboard') }}">
-                            <i class="fas fa-home"></i>Home
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('doctor.prescribe') }}">
-                            <i class="fa-solid fa-prescription"></i>Prescribe
-                        </a>
-                    </li>
-                    <li>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" class="btn text-white w-100 text-start" style="background:none; border:none">
-                                <i class="fas fa-sign-out-alt"></i>Logout
-                            </button>
-                        </form>
-                    </li>
-                </ul>
+            {{-- Navigation --}}
+            <nav class="nav flex-column sidebar-nav ms-2 mt-4">
+
+                <a href="{{ route('') }}" class="nav-link d-flex align-items-center text-white">
+                    <i class="fas fa-home fa-xl me-3"></i>
+                    <span>Home</span>
+                </a>
+
+                <a href="{{ route('') }}" class="nav-link d-flex align-items-center text-white">
+                    <i class="fas fa-prescription fa-xl me-3"></i>
+                    <span>Prescribe</span>
+                </a>
+
             </nav>
 
-            <div class="footer">
-                PatientCare © {{ date('Y') }}<br>
-                Version 1.0.0
+            {{-- Footer --}}
+            <div class="footer text-center mt-auto pt-4">
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-outline-light w-100 text-start p-2">
+                        <i class="fas fa-sign-out-alt fa-xl me-2"></i> Logout
+                    </button>
+                </form>
+                <small class="d-block mt-3">PatientCare © {{ date('Y') }}</small>
+                <sup>V1.0.0</sup>
             </div>
+
         </aside>
 
-        <main class="main-content">
+        {{-- Main Content --}}
+        <main class="flex-grow-1 p-4">
             @yield('content')
         </main>
 
-        {{-- Bootstrap JS --}}
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    </div>
 
+    {{-- Bootstrap JS --}}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     </body>
 </html>
