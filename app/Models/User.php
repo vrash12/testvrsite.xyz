@@ -20,11 +20,24 @@ class User extends Authenticatable
     public $incrementing = true;
 
     protected $fillable = [
-        'username',
-        'email',
-        'password',
-        'role',
+      'username','email','password','role',
+      'department_id','room_id','bed_id',
     ];
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class, 'department_id', 'department_id');
+    }
+
+    public function room()
+    {
+        return $this->belongsTo(Room::class, 'room_id', 'room_id');
+    }
+
+    public function bed()
+    {
+        return $this->belongsTo(Bed::class, 'bed_id', 'bed_id');
+    }
 
     protected $hidden = [
         'password',

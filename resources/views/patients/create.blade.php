@@ -296,34 +296,67 @@
                          placeholder="e.g. ER, Clinic Referral">
                   @error('admission_source')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
-                <div class="col-md-4">
-                  <label class="form-label">Department <span class="text-danger">*</span></label>
-                  <input type="text" name="department" value="{{ old('department') }}"
-                         class="form-control @error('department') is-invalid @enderror"
-                         placeholder="e.g. Cardiology" required>
-                  @error('department')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Attending Doctor/s <span class="text-danger">*</span></label>
-                  <input type="text" name="attending_doctors" value="{{ old('attending_doctors') }}"
-                         class="form-control @error('attending_doctors') is-invalid @enderror"
-                         placeholder="Dr. Lastname, Firstname" required>
-                  @error('attending_doctors')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Room Number <span class="text-danger">*</span></label>
-                  <input type="text" name="room_number" value="{{ old('room_number') }}"
-                         class="form-control @error('room_number') is-invalid @enderror"
-                         placeholder="e.g. 301A" required>
-                  @error('room_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Bed Number</label>
-                  <input type="text" name="bed_number" value="{{ old('bed_number') }}"
-                         class="form-control @error('bed_number') is-invalid @enderror"
-                         placeholder="e.g. B1">
-                  @error('bed_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
+               <div class="col-md-4">
+  <label class="form-label">Department <span class="text-danger">*</span></label>
+<select id="department" name="department_id" class="form-select" required>
+    <option value="">Choose…</option>
+    @foreach($departments as $d)
+        <option value="{{ $d->department_id }}" {{ old('department_id')==$d->department_id ? 'selected' : '' }}>
+            {{ $d->department_name }}
+        </option>
+    @endforeach
+</select>
+
+</div>
+             <div class="col-md-4">
+  <label class="form-label">Attending Doctor <span class="text-danger">*</span></label>
+  <select id="doctor" name="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror" required>
+    <option value="">Choose department first…</option>
+    @foreach($doctors as $doc)
+      <option value="{{ $doc->doctor_id }}"
+        {{ old('doctor_id') == $doc->doctor_id ? 'selected' : '' }}>
+        {{ $doc->doctor_name }}
+      </option>
+    @endforeach
+  </select>
+  @error('doctor_id')
+    <div class="invalid-feedback">{{ $message }}</div>
+  @enderror
+</div>
+
+<div class="col-md-4">
+  <label class="form-label">Room <span class="text-danger">*</span></label>
+  <select id="room" name="room_id" class="form-select @error('room_id') is-invalid @enderror" required>
+    <option value="">Choose department first…</option>
+    @foreach($rooms as $room)
+      <option value="{{ $room->room_id }}"
+        {{ old('room_id') == $room->room_id ? 'selected' : '' }}>
+        {{ $room->room_number }}
+      </option>
+    @endforeach
+  </select>
+  @error('room_id')
+    <div class="invalid-feedback">{{ $message }}</div>
+  @enderror
+</div>
+
+<div class="col-md-4">
+  <label class="form-label">Bed</label>
+  <select id="bed" name="bed_id" class="form-select @error('bed_id') is-invalid @enderror">
+    <option value="">Choose room first…</option>
+    @foreach($beds as $bed)
+      <option value="{{ $bed->bed_id }}"
+        {{ old('bed_id') == $bed->bed_id ? 'selected' : '' }}>
+        {{ $bed->bed_number }}
+      </option>
+    @endforeach
+  </select>
+  @error('bed_id')
+    <div class="invalid-feedback">{{ $message }}</div>
+  @enderror
+</div>
+
+              
                 <div class="col-12">
                   <label class="form-label">Admission Notes</label>
                   <textarea name="admission_notes" rows="3"
@@ -418,5 +451,47 @@
       });
     });
   });
+const deptSelect = document.getElementById('department');
+const docSelect  = document.getElementById('doctor');
+const roomSelect = document.getElementById('room');
+const bedSelect  = document.getElementById('bed');
+
+deptSelect.addEventListener('change', async () => {
+  const depId = deptSelect.value;
+  if (!depId) return;
+
+  // Fetch doctors
+  let doctors = await fetch(`/admission/departments/${depId}/doctors`)
+                    .then(res => res.json());
+  docSelect.innerHTML = '<option value="">Select doctor…</option>';
+  doctors.forEach(d => {
+    docSelect.innerHTML += `<option value="${d.doctor_id}">${d.doctor_name}</option>`;
+  });
+
+  // Fetch rooms
+  let rooms = await fetch(`/admission/departments/${depId}/rooms`)
+                   .then(res => res.json());
+  roomSelect.innerHTML = '<option value="">Select room…</option>';
+  rooms.forEach(r => {
+    roomSelect.innerHTML += `<option value="${r.room_id}">${r.room_number}</option>`;
+  });
+
+  // reset bed
+  bedSelect.innerHTML = '<option value="">Select room first…</option>';
+});
+
+roomSelect.addEventListener('change', async () => {
+  const roomId = roomSelect.value;
+  if (!roomId) return;
+
+  // Fetch beds
+  let beds = await fetch(`/admission/rooms/${roomId}/beds`)
+                  .then(res => res.json());
+  bedSelect.innerHTML = '<option value="">Select bed…</option>';
+  beds.forEach(b => {
+    bedSelect.innerHTML += `<option value="${b.bed_id}">${b.bed_number}</option>`;
+  });
+});
+  
 </script>
 @endsection

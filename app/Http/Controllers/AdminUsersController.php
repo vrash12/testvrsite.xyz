@@ -8,11 +8,10 @@ use Illuminate\Support\Facades\Hash;
 
 class AdminUsersController extends Controller
 {
-    public function __construct()
-    {
-        // ensure only logged-in admins can access
-        $this->middleware(['auth:admin']);
-    }
+   public function __construct()
+{
+    $this->middleware('auth');
+}
 
     public function index()
     {
@@ -20,11 +19,19 @@ class AdminUsersController extends Controller
         return view('admin.users.index', compact('users'));
     }
 
-    public function create()
-    {
-        $roles = ['admin','patient','doctor','admission','billing','hospital_services','pharmacy'];
-        return view('admin.users.create', compact('roles'));
-    }
+  public function create()
+{
+    $roles = ['admin','patient','doctor','admission','billing','hospital_services','pharmacy'];
+
+    // load for dropdowns:
+    $departments = \App\Models\Department::orderBy('department_name')->get();
+    $rooms       = \App\Models\Room::where('status','available')->orderBy('room_number')->get();
+    $beds        = \App\Models\Bed::where('status','available')->orderBy('bed_number')->get();
+
+    return view('admin.users.create', compact(
+        'roles','departments','rooms','beds'
+    ));
+}
 
     public function store(Request $request)
     {
@@ -47,6 +54,37 @@ class AdminUsersController extends Controller
         $roles = ['admin','patient','doctor','admission','billing','hospital_services','pharmacy'];
         return view('admin.users.edit', compact('user','roles'));
     }
+
+    public function showAssignment(User $user)
+{
+    $departments = Department::all();
+    // pre-load rooms for the user’s current department, if any
+    $rooms = $user->department
+           ? $user->department->rooms()->where('status','available')->get()
+           : collect();
+    // pre-load beds for the user’s current room, if any
+    $beds  = $user->room
+           ? $user->room->beds()->where('status','available')->get()
+           : collect();
+
+    return view('admin.users.assign', compact('user','departments','rooms','beds'));
+}
+
+public function updateAssignment(Request $request, User $user)
+{
+    $data = $request->validate([
+      'department_id' => 'nullable|exists:departments,department_id',
+      'room_id'       => 'nullable|exists:rooms,room_id',
+      'bed_id'        => 'nullable|exists:beds,bed_id',
+    ]);
+
+    $user->update($data);
+
+    return redirect()
+        ->route('admin.users.index')
+        ->with('success','Assignments updated successfully.');
+}
+
 
     public function update(Request $request, User $user)
     {

@@ -28,6 +28,10 @@
           <td>{{ ucfirst($u->role) }}</td>
           <td>
             <a href="{{ route('admin.users.edit',$u) }}" class="btn btn-sm btn-outline-secondary">✎</a>
+              <a href="{{ route('admin.users.assign', $u) }}"
+     class="btn btn-sm btn-outline-primary">
+    📋 Assign
+  </a>
             <form method="POST" action="{{ route('admin.users.destroy',$u) }}" class="d-inline">
               @csrf @method('DELETE')
               <button onclick="return confirm('Delete?')" class="btn btn-sm btn-outline-danger">🗑</button>

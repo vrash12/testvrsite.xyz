@@ -10,6 +10,7 @@ use App\Models\MedicalDetail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Hash;  
 
 class Patient extends Model
 {
@@ -61,7 +62,10 @@ class Patient extends Model
     {
         return $this->hasOne(AdmissionDetail::class, 'patient_id');
     }
-
+public function setPasswordAttribute($plain)
+{
+    $this->attributes['password'] = Hash::make($plain);
+}
     /**
      * One-to-one: a patient has one billing information record.
      */
