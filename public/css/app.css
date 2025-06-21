@@ -4,7 +4,7 @@
 
 /* LAYOUT/SIDEBAR | START */
 
-    .sidebar{width: 240px; display: flex; flex-direction:column}
+    .sidebar{width:240px; display:flex; flex-direction:column; background-color:#00529A ;}
     
     .logo{ width:80px } 
 
@@ -17,6 +17,10 @@
     .nav-link:hover { 
         background-color: rgba(255, 255, 255, 0.2); 
         color: #fff !important;
+    }
+
+    nav .icon{
+        width: 30px;
     }
 
 /* END */
