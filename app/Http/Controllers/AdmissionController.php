@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Admin;
 use App\Models\Patient;
 use App\Models\Doctor;
 use App\Models\Department;
@@ -12,6 +11,8 @@ use App\Models\BillingInformation;
 use App\Models\InsuranceProvider;
 use App\Models\PaymentMethod;
 use Illuminate\Http\Request;
+use App\Models\Room;
+
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -21,10 +22,11 @@ use App\Models\Bed;
 
 class AdmissionController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:admin')->except(['login', 'authenticate']);
-    }
+  public function __construct()
+{
+    $this->middleware('auth');
+}
+
 
     public function login()
     {
@@ -46,13 +48,12 @@ class AdmissionController extends Controller
         ));
     }
 
-    public function storePatient(Request $request)
-    {
-        try {
-            DB::beginTransaction();
+  public function storePatient(Request $request)
+{
+    try {
+        DB::beginTransaction();
 
-        
-            $validated = $request->validate([
+      $validated = $request->validate([
           
                 'first_name' => 'required|string|max:100',
                 'last_name' => 'required|string|max:100',
@@ -79,10 +80,10 @@ class AdmissionController extends Controller
                 'admission_date' => 'required|date',
                 'admission_type' => 'required|string',
                 'admission_source' => 'required|string',
-                'department_id' => 'required|exists:departments,department_id',
-                'doctor_id' => 'required|exists:doctors,doctor_id',
-                'room_number' => 'required|string',
-                'bed_number' => 'required|string',
+              'department_id' => 'required|exists:departments,department_id',
+  'doctor_id'     => 'required|exists:doctors,doctor_id',
+  'room_id'       => 'required|exists:rooms,room_id',
+  'bed_id'        => 'nullable|exists:beds,bed_id',
                 'admission_notes' => 'nullable|string',
 
 
@@ -99,19 +100,18 @@ class AdmissionController extends Controller
                 'billing_notes' => 'nullable|string',
             ]);
 
-            // Create patient
-            $patient = Patient::create([
-                'patient_first_name' => $validated['first_name'],
-                'patient_last_name' => $validated['last_name'],
-                'patient_birthday' => $validated['birthday'],
-                'email' => $validated['email'] ?? null,
-                'phone_number' => $validated['phone'] ?? null,
-                'civil_status' => $validated['civil_status'] ?? null,
-                'address' => $validated['address'] ?? null,
-            ]);
+        // 1) Create patient (without email/password for now)
+        $patient = Patient::create([
+            'patient_first_name' => $validated['first_name'],
+            'patient_last_name'  => $validated['last_name'],
+            'patient_birthday'   => $validated['birthday'] ?? null,
+            'phone_number'       => $validated['phone'] ?? null,
+            'civil_status'       => $validated['civil_status'] ?? null,
+            'address'            => $validated['address'] ?? null,
+        ]);
 
-            // Create medical details
-            MedicalDetail::create([
+        // 2) Medical details
+        MedicalDetail::create([
                 'patient_id' => $patient->patient_id,
                 'primary_reason' => $validated['primary_reason'],
                 'temperature' => $validated['temperature'],
@@ -124,22 +124,22 @@ class AdmissionController extends Controller
                 'other_medical_history' => $validated['other_medical_history'],
                 'other_allergies' => $validated['other_allergies'],
             ]);
+        // 3) Admission details
+    AdmissionDetail::create([
+  'patient_id'      => $patient->patient_id,
+  'admission_date'  => $validated['admission_date'],
+  'admission_type'  => $validated['admission_type'],
+  'admission_source'=> $validated['admission_source'],
+  'department_id'   => $validated['department_id'],
+  'doctor_id'       => $validated['doctor_id'],
+  'room_id'         => $validated['room_id'],
+  'bed_id'          => $validated['bed_id'] ?? null,
+  'admission_notes' => $validated['admission_notes'],
+]);
 
-            // Create admission details
-            AdmissionDetail::create([
-                'patient_id' => $patient->patient_id,
-                'admission_date' => $validated['admission_date'],
-                'admission_type' => $validated['admission_type'],
-                'admission_source' => $validated['admission_source'],
-                'department_id' => $validated['department_id'],
-                'doctor_id' => $validated['doctor_id'],
-                'room_number' => $validated['room_number'],
-                'bed_number' => $validated['bed_number'],
-                'admission_notes' => $validated['admission_notes'],
-            ]);
 
-            // Create billing information
-            BillingInformation::create([
+        // 4) Billing information
+   BillingInformation::create([
                 'patient_id' => $patient->patient_id,
                 'payment_method_id' => $validated['payment_method_id'],
                 'insurance_provider_id' => $validated['insurance_provider_id'],
@@ -154,63 +154,68 @@ class AdmissionController extends Controller
                 'billing_notes' => $validated['billing_notes'],
             ]);
 
-            DB::commit();
+        // 5) Generate & save portal credentials (Section 1.4.1)
+        $generatedEmail = "{$patient->patient_id}@patientcare.test";
+        $plainPassword  = '12345678';
 
-            return redirect()->route('admin.dashboard')
-                           ->with('success', 'Patient admitted successfully');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error admitting patient: ' . $e->getMessage());
-            return back()->with('error', 'Error admitting patient: ' . $e->getMessage())
-                        ->withInput();
-        }
-    }
-
-    public function authenticate(Request $request)
-    {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
+        $patient->update([
+            'email'    => $generatedEmail,
+            'password' => $plainPassword,      // will be hashed by Patient::setPasswordAttribute
         ]);
 
-        if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
-            return redirect()->intended(route('admin.dashboard'));
-        }
+        DB::commit();
 
-        return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
-        ])->onlyInput('email');
+  return redirect()
+    ->route('admission.patients.show', $patient)
+    ->with([
+        'generatedEmail' => $generatedEmail,
+        'plainPassword'  => $plainPassword,
+        'success'        => 'Patient created successfully.',
+    ]);
+
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error admitting patient: ' . $e->getMessage());
+        return back()
+            ->with('error', 'Error admitting patient: ' . $e->getMessage())
+            ->withInput();
     }
-public function dashboard()
-{
-    $recentAdmissions = AdmissionDetail::with(['patient','doctor'])
-        ->latest()
-        ->take(5)
-        ->get();
-
-    $pendingBillings = BillingInformation::whereNull('payment_status')
-        ->with('patient')
-        ->take(5)
-        ->get();
+}
 
    
+public function dashboard()
+{
+    // 1) Total patients ever admitted
+    $totalPatients = Patient::count();
+
+    // 2) New admissions today (or in the last 7 days, whatever “new” means)
+    $newAdmissions = AdmissionDetail::whereDate('admission_date', today())->count();
+
+    // 3) Available beds (you already have this)
     $availableBeds = Bed::where('status','available')->count();
 
-    return view('admin.dashboard', [
-        'admin'            => Auth::guard('admin')->user(),
-        'recentAdmissions' => $recentAdmissions,
-        'pendingBillings'  => $pendingBillings,
-        'availableBeds'    => $availableBeds,   
-    ]);
+    // 4) Recent admissions for the table (with patient, room, doctor, diagnosis)
+    $recentAdmissions = AdmissionDetail::with(['patient','doctor'])
+                        ->latest()
+                        ->take(5)
+                        ->get();
+
+    return view('admission.dashboard', compact(
+        'totalPatients',
+        'newAdmissions',
+        'availableBeds',
+        'recentAdmissions'
+    ));
 }
+
+
     public function patients()
     {
         $patients = Patient::with(['admissionDetails', 'medicalDetails', 'billingInformation'])
             ->latest()
             ->paginate(10);
-        return view('admin.patients.index', compact('patients'));
+        return view('admission.patients.index', compact('patients'));
     }
 
     public function getDepartments()
@@ -251,10 +256,10 @@ public function dashboard()
 
     public function logout(Request $request)
     {
-        Auth::guard('admin')->logout();
+        Auth::guard('admission')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect()->route('admin.login');
+        return redirect()->route('admission.login');
     }
 
   

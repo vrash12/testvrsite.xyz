@@ -60,7 +60,7 @@
               LOGIN
             </a>
           @else
-            @if(Auth::guard('admin')->check())
+            @if(auth()->user()->role === 'admin')
               <a
                 class="btn btn-outline-secondary ms-3"
                 href="{{ route('admin.dashboard') }}"
@@ -80,6 +80,13 @@
                 href="{{ route('pharmacy.dashboard') }}"
               >
                 <i class="fa fa-prescription-bottle-medical"></i> Pharmacy Panel
+              </a>
+            @elseif(auth()->user()->role === 'patient')
+              <a
+                class="btn btn-outline-secondary ms-3"
+                href="{{ route('patient.dashboard') }}"
+              >
+                <i class="fa fa-user-injured"></i> Patient Dashboard
               </a>
             @endif
           @endguest

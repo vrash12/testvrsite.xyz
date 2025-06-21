@@ -12,7 +12,10 @@ use App\Models\{
     Department,
     Doctor,
     InsuranceProvider,
-    PaymentMethod
+    PaymentMethod,
+    Room,
+    Bed,
+
 };
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{DB, Hash};
@@ -20,10 +23,10 @@ use Illuminate\Support\Str;
 
 class PatientController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware(['auth','role:admission']);
-    }
+   public function __construct()
+{
+    $this->middleware('auth');
+}
      public function index()
     {
         // Fetch all patients, ordered by last name
@@ -32,17 +35,48 @@ class PatientController extends Controller
         return view('patients.index', compact('patients'));
     }
 
-    public function create()
-    {
-        $departments        = Department::pluck('department_name','department_id');
-        $doctors            = Doctor::pluck('doctor_name','doctor_id');
-        $insuranceProviders = InsuranceProvider::pluck('name','insurance_provider_id');
-        $paymentMethods     = PaymentMethod::pluck('name','payment_method_id');
+    public function getDoctorsByDepartment($departmentId)
+{
+    $doctors = Doctor::where('department_id', $departmentId)->get();
+    return response()->json($doctors);
+}
 
-        return view('patients.create', compact(
-            'departments','doctors','insuranceProviders','paymentMethods'
-        ));
-    }
+/**
+ * GET /admission/departments/{department}/rooms
+ */
+public function getRoomsByDepartment($departmentId)
+{
+    $rooms = Room::where('department_id', $departmentId)
+                 ->where('status', 'available')
+                 ->get();
+    return response()->json($rooms);
+}
+
+/**
+ * GET /admission/rooms/{room}/beds
+ */
+public function getBedsByRoom($roomId)
+{
+    $beds = Bed::where('room_id', $roomId)
+               ->where('status', 'available')
+               ->get();
+    return response()->json($beds);
+}
+
+public function create()
+{
+    $departments        = Department::all();
+    $doctors            = collect();   // start empty
+    $rooms              = collect();   // start empty
+    $beds               = collect();   // start empty
+    $insuranceProviders = InsuranceProvider::pluck('name','insurance_provider_id');
+    $paymentMethods     = PaymentMethod::pluck('name','payment_method_id');
+
+    return view('patients.create', compact(
+        'departments','doctors','rooms','beds','insuranceProviders','paymentMethods'
+    ));
+}
+
 
 public function store(Request $request)
 {
@@ -66,15 +100,19 @@ public function store(Request $request)
         'history_others'     => 'nullable|string',
         'allergy_others'     => 'nullable|string',
 
-        /* Admission */
-        'admission_date'     => 'required|date',
-        'admission_type'     => 'required|string',
-        'admission_source'   => 'nullable|string',
-        'department'         => 'required|string|max:100',
-        'attending_doctors'  => 'required|string',
-        'room_number'        => 'required|string',
-        'bed_number'         => 'nullable|string',
-        'admission_notes'    => 'nullable|string',
+
+       /* Admission */
+'admission_date'   => 'required|date',
+'admission_type'   => 'required|string|max:50',
+'admission_source' => 'nullable|string|max:100',
+
+'department_id'    => 'required|exists:departments,department_id',
+'doctor_id'        => 'required|exists:doctors,doctor_id',
+'room_id'          => 'required|exists:rooms,room_id',
+'bed_id'           => 'nullable|exists:beds,bed_id',
+
+'admission_notes'  => 'nullable|string',
+
 
         /* Billing */
         'insurance_provider' => 'nullable|string|max:100',
@@ -95,7 +133,7 @@ public function store(Request $request)
     $seqPadded    = str_pad($seq,3,'0',STR_PAD_LEFT);
     $generatedEmail = "{$base}.{$seqPadded}@patientcare.com";
 
-    $plainPassword  = Str::random(8);
+    $plainPassword  = "password";
     $hashedPassword = Hash::make($plainPassword);
 
     /* --------------------- 3. SAVE TRANSACTION --------------------- */
@@ -141,28 +179,28 @@ public function store(Request $request)
             ]),
         ]);
 
-        // 3.3 Department & Doctors
-        $department = Department::firstOrCreate(
-            ['department_name' => trim($data['department'])],
-            ['description'     => null]
-        );
-        $doctorIds = collect(explode(',', $data['attending_doctors']))
-            ->map(fn($n) => trim($n))
-            ->filter()
-            ->map(fn($n) => Doctor::firstOrCreate(['doctor_name' => $n])->doctor_id)
-            ->all();
+  
+$room = Room::findOrFail($data['room_id']);
+$bed  = $data['bed_id']
+      ? Bed::findOrFail($data['bed_id'])
+      : null;
 
-        // 3.4 Admission Details
-        $p->admissionDetail()->create([
-            'admission_date'   => $data['admission_date'],
-            'admission_type'   => $data['admission_type'],
-            'admission_source' => $data['admission_source'],
-            'department_id'    => $department->department_id,
-            'doctor_id'        => $doctorIds[0] ?? null,
-            'room_number'      => $data['room_number'],
-            'bed_number'       => $data['bed_number'],
-            'admission_notes'  => $data['admission_notes'],
-        ]);
+   $p->admissionDetail()->create([
+    'admission_date'   => $data['admission_date'],
+    'admission_type'   => $data['admission_type'],
+    'admission_source' => $data['admission_source'] ?? '',
+
+    'department_id'    => $data['department_id'],
+    'doctor_id'        => $data['doctor_id'],
+
+    // use the VARCHAR columns the table actually defines:
+    'room_number'      => $room->room_number,
+    'bed_number'       => $bed ? $bed->bed_number : '',
+
+    'admission_notes'  => $data['admission_notes'],
+]);
+
+
 
         // 3.5 Billing Information & Initial Deposit
         $p->billingInformation()->create([
@@ -190,14 +228,14 @@ public function store(Request $request)
         return $p;
     });
 
-    /* --------------------- 4. REDIRECT --------------------- */
-    return redirect()
-        ->route('patients.show', $patient)
-        ->with([
-            'generatedEmail' => $generatedEmail,
-            'plainPassword'  => $plainPassword,
-            'success'        => 'Patient created successfully.',
-        ]);
+ return redirect()
+    ->route('patients.show', $patient)
+    ->with([
+        'generatedEmail' => $generatedEmail,
+        'plainPassword'  => $plainPassword,
+        'success'        => 'Patient created successfully.',
+    ]);
+
 }
 
 

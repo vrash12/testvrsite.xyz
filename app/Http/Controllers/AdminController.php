@@ -10,12 +10,10 @@ use App\Models\Bed;
 
 class AdminController extends Controller
 {
-    public function __construct()
-    {
-        // protect every admin route
-        $this->middleware('auth:admin');
-    }
-
+  public function __construct()
+{
+    $this->middleware('auth');
+}
     /** GET /admin/dashboard */
     public function dashboard()
     {

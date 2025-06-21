@@ -48,6 +48,14 @@
                     </span>
                     <span class="ms-2">Manage Users</span>
                   </a>
+                  <div class="mt-4 px-2 text-uppercase text-white-50 small">Manage Resources</div>
+
+<a href="{{ route('admin.resources.index') }}"
+   class="nav-link d-flex align-items-center text-white 
+          {{ request()->routeIs('admin.resources.*') ? 'active' : '' }}">
+  <i class="fas fa-layer-group fa-xl me-3"></i>
+  <span>Rooms &amp; Beds</span>
+</a>
                </nav>
 
               {{-- Bottom --}}

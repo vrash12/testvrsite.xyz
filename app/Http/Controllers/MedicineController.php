@@ -9,10 +9,10 @@ use Illuminate\Http\Request;
 
 class MedicineController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware(['auth','role:pharmacy']);
-    }
+   public function __construct()
+{
+    $this->middleware('auth');
+}
 
     /**
      * Display a paginated list of medicines with current stock.
