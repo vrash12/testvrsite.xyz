@@ -33,12 +33,12 @@
             {{-- Navigation --}}
             <nav class="nav flex-column sidebar-nav ms-2 mt-4">
 
-                <a href="{{ route('') }}" class="nav-link d-flex align-items-center text-white">
+                <a href="{{ route('doctor.dashboard') }}" class="nav-link d-flex align-items-center text-white">
                     <i class="fas fa-home fa-xl me-3"></i>
                     <span>Home</span>
                 </a>
 
-                <a href="{{ route('') }}" class="nav-link d-flex align-items-center text-white">
+                <a href="{{ route('doctor.dashboard') }}" class="nav-link d-flex align-items-center text-white">
                     <i class="fas fa-prescription fa-xl me-3"></i>
                     <span>Prescribe</span>
                 </a>

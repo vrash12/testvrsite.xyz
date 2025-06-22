@@ -9,13 +9,11 @@ class AdmissionDetail extends Model
 {
     protected $table      = 'admission_details';
     protected $primaryKey = 'admission_id';
-    public $timestamps    = true;
+    public    $timestamps = true;
     protected $guarded    = [];
 
-    // Tell Eloquent to cast admission_date to a Carbon instance
     protected $casts = [
         'admission_date' => 'date',
-        // if you have created_at/updated_at columns, cast them too:
         'created_at'     => 'datetime',
         'updated_at'     => 'datetime',
     ];
@@ -33,5 +31,21 @@ class AdmissionDetail extends Model
     public function doctor(): BelongsTo
     {
         return $this->belongsTo(Doctor::class, 'doctor_id');
+    }
+
+    /**
+     * Link admission_details.room_number → rooms.room_number
+     */
+    public function room(): BelongsTo
+    {
+        return $this->belongsTo(Room::class, 'room_number', 'room_number');
+    }
+
+    /**
+     * (Optionally) if you also want to fetch the Bed by its number:
+     */
+    public function bed(): BelongsTo
+    {
+        return $this->belongsTo(Bed::class, 'bed_number', 'bed_number');
     }
 }

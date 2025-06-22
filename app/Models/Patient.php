@@ -12,24 +12,21 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Hash;  
 
-class Patient extends Model
+
+class Patient extends Authenticatable
 {
     use HasFactory;
 
-    // If your table name isn’t the plural of the class name, set it explicitly:
     protected $table = 'patients';
     protected $guarded    = [];    
 
     use Notifiable;
 
-    // Tell Eloquent the primary key is 'patient_id'
     protected $primaryKey = 'patient_id';
 
-    // If you don’t have created_at/updated_at, disable timestamps.
-    public $timestamps = true; 
-    // (You already have created_at and updated_at, so leave true.)
 
-    // Cast primary key to int:
+    public $timestamps = true; 
+
     protected $keyType = 'int';
     public $incrementing = true;
 
@@ -42,10 +39,10 @@ class Patient extends Model
         'phone_number',
         'address',
         'password',
-        // if you add city / zip to table, include them here
+       
     ];
 
-    // Cast columns to appropriate PHP types
+ 
     protected $casts = [
         'patient_birthday' => 'date',
     ];
@@ -55,9 +52,7 @@ class Patient extends Model
         return $this->hasOne(MedicalDetail::class, 'patient_id');
     }
 
-    /**
-     * One-to-one: a patient has one admission record.
-     */
+
     public function admissionDetail(): HasOne
     {
         return $this->hasOne(AdmissionDetail::class, 'patient_id');

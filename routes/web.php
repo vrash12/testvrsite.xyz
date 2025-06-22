@@ -12,15 +12,18 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminUsersController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\Admin\ResourceController;
-// Public + auth
+use App\Http\Controllers\ChargeController;
 
-Route::middleware('auth:web')
-     ->prefix('patient')->name('patient.')
-     ->group(function(){
-         Route::get('dashboard', [App\Http\Controllers\PatientDashboardController::class, 'index'])
-              ->name('dashboard');
-     });
+
+
+Route::prefix('patient')->name('patient.')->middleware('auth:patient')->group(function(){
+    Route::get('/dashboard', [\App\Http\Controllers\PatientController::class, 'dashboard'])
+         ->name('dashboard');
+    // … other patient‐only routes
+});
+
 
 Route::middleware('auth')->get('/dashboard', function () {
     $role = Auth::user()->role;
@@ -34,7 +37,8 @@ Route::middleware('auth')->get('/dashboard', function () {
 });
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/login',   [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login',  [LoginController::class, 'login'])->name('login.attempt');
+Route::post('/login', [LoginController::class,'login'])
+     ->name('login.attempt');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 
@@ -61,6 +65,7 @@ Route::middleware(['auth'])
      ->group(function () {
          Route::get('dashboard',[PharmacyController::class,'index'])->name('dashboard');
          Route::resource('medicines', MedicineController::class);
+          Route::resource('charges', ChargeController::class);
      });
 
 Route::middleware(['auth'])
@@ -80,9 +85,26 @@ Route::post('users/{user}/assign',
             Route::get('resources/create', [ResourceController::class,'create'])
                 ->name('resources.create');
                 //edit
-            
-            
-// then:
 Route::resource('users', AdminUsersController::class);
 
       });
+
+                  
+Route::prefix('doctor')
+     ->name('doctor.')
+     ->middleware('auth')       // checks Auth::guard('web')
+     ->group(function(){
+         // GET /doctor/dashboard → DoctorController@dashboard
+         Route::get('/dashboard', [DoctorController::class,'dashboard'])
+              ->name('dashboard');
+
+  Route::get('/patients/{patient}', [DoctorController::class,'show'])
+              ->name('patient.show');
+               Route::get('/order-entry/{patient}',  // GET form
+                     [DoctorController::class,'orderEntry'])
+               ->name('order');
+
+          Route::post('/orders/{patient}',     // POST assign order
+                     [DoctorController::class,'storeOrder'])
+               ->name('orders.store');
+     });

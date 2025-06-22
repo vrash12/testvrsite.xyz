@@ -78,7 +78,7 @@
       </table>
     </div>
     <div class="card-footer text-center">
-      <a href="{{ route('pharmacy.index') }}" class="small">View all charges →</a>
+      <a href="{{ route('pharmacy.dashboard') }}" class="small">View all charges →</a>
     </div>
   </div>
 

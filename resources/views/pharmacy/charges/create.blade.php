@@ -1,3 +1,5 @@
+{{--resources/views/pharmacy/create.blade.php--}}
+
 @extends('layouts.pharmacy')
 
 @section('content')
