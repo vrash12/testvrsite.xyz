@@ -12,6 +12,7 @@
       ['label'=>'New Admissions',   'value'=>$newAdmissions,  'icon'=>'fa-user-plus'],
       ['label'=>'Available Beds',   'value'=>$availableBeds,  'icon'=>'fa-bed'],
     ] as $card)
+    
     <div class="col-md-4">
       <div class="card shadow-sm">
         <div class="card-body d-flex align-items-center">

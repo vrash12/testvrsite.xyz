@@ -2,6 +2,9 @@
 
 @section('content')
 
+    {{-- Primary source of charges. Specially for charges that need prescription --}}
+    {{-- Every Department.items.item DB is accessed by this Module --}}
+
 <div class="container-fluid py-4 border" style="background-color: #fafafafa">
 
     <h2 class="hdng mb-4">Patient - Doctor Managenement</h2>
@@ -28,9 +31,10 @@
         </div>
    </div>
 
+   {{-- Edit ko to in table form --}}
    <div class="row mb-4">
 
-    {{-- Recent Prescriptions: DATE | PATIENT | ITEM | DEPARTMENT | STATUS--}}
+    {{-- Recent Prescriptions: | DATE | PATIENT | ITEM |--}}
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">Recent Prescriptions</div>
@@ -40,15 +44,13 @@
                             {{ $rcnt->recent_date->format('M d, Y') }}
                             {{ $rcnt->patient_name }}
                             {{ $rcnt->item_name}}
-                            {{ $rcnt->department_name}}
-                            {{ $rcnt->status}}
                         </li>
                     @endforeach
                 </ul>
             </div>
         </div>
     
-    {{-- Most Prescribed for the day: ITEM NAME | DEPARTMENT | COUNT  --}}
+    {{-- Most Prescribed for the day: | ITEM NAME | COUNT |  --}}
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">Most Prescribed</div>
@@ -56,7 +58,6 @@
                     @foreach ($mostPrescribedItems as $mst)
                         <li class="list-group-item">
                             {{ $mst->item_name }}
-                            {{ $mst->item_type }}
                             {{ $mst->item_count }} 
                         </li>
                     @endforeach
