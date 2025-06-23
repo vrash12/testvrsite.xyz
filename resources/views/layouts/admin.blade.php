@@ -11,8 +11,17 @@
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
       {{-- Font Awesome --}}
       <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
       {{-- CCS --}}
-      <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+      <style>
+            .sidebar{width:240px; display:flex; flex-direction:column; background-color:#00529A ;}
+            .logo{ width:80px } 
+            .avatar { width:90px; height: 90px; background-color: aliceblue; }
+            .nav-link {transition: background-color 0.2s ease; border-radius: 0.375rem;}
+            .nav-link:hover { background-color: rgba(255, 255, 255, 0.2); color: #fff !important; }
+            nav .icon{ width: 30px;}
+            .hdng{font-size: 1.5em;}
+      </style>
 
   </head>
   <body>
@@ -42,7 +51,7 @@
                   </a>
 
                   <a href="{{route('admin.users.index')}}" class="nav-link d-flex text-white gap-2 px-2 py-2 
-                          {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                           {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
                     <span class="icon justify-content-center align-items-center">
                         <i class="fas fa-users fa-xl"></i>
                     </span>
@@ -50,12 +59,13 @@
                   </a>
                   <div class="mt-4 px-2 text-uppercase text-white-50 small">Manage Resources</div>
 
-<a href="{{ route('admin.resources.index') }}"
-   class="nav-link d-flex align-items-center text-white 
-          {{ request()->routeIs('admin.resources.*') ? 'active' : '' }}">
-  <i class="fas fa-layer-group fa-xl me-3"></i>
-  <span>Rooms &amp; Beds</span>
-</a>
+                <a href="{{ route('admin.resources.index') }}" class="nav-link d-flex text-white gap-2 px-2 py-2 
+                         {{ request()->routeIs('admin.resources.*') ? 'active' : '' }}">
+                    <span class="icon justify-content-center align-items-center">
+                        <i class="fas fa-layer-group fa-xl me-3"></i>
+                    </span>
+                    <span class="ms-2">Rooms &amp; Beds</span>
+                </a>
                </nav>
 
               {{-- Bottom --}}
@@ -82,6 +92,8 @@
 
         {{-- Bootstrap JS --}}
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        
+        @stack('scripts')
     </body>
 </html>
  
