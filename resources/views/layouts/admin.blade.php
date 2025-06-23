@@ -13,6 +13,7 @@
       <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
       {{-- CCS --}}
       <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+
   </head>
   <body>
 
@@ -20,7 +21,7 @@
       <div class="d-flex">
 
           {{-- Sidebar --}}
-          <aside class="sidebar bg-primary text-white p-3 vh-100 ">
+          <aside class="sidebar text-white p-3 vh-100 flex-shrink-0">
 
               {{-- Top --}}
               <div class="text-center mb-6">
@@ -30,18 +31,22 @@
                   <small>Admin ID: {{ Auth::id() }}</small>
               </div>
 
-              {{-- List Routes --}}
-              <nav class="nav flex-column mb-auto sidebar-nav ms-2 mt-4">
-                 <a href="{{route('admin.dashboard')}}" class="nav-link d-flex align-items-center text-white 
+              {{-- Navigation Links --}}
+              <nav class="mb-auto ms-2 mt-4">
+                 <a href="{{route('admin.dashboard')}}" class="nav-link d-flex text-white gap-2 px-2 py-2
                           {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                   <i class="fa-solid fa-gauge fa-xl me-3"></i>
-                   <span>Dashboard</span>
+                    <span class="icon justify-content-center align-items-center">
+                        <i class="fa-solid fa-gauge fa-xl"></i>
+                    </span>
+                    <span class="ms-2">Dashboard</span>
                   </a>
 
-                  <a href="{{route('admin.users.index')}}" class="nav-link d-flex align-items-center text-white 
+                  <a href="{{route('admin.users.index')}}" class="nav-link d-flex text-white gap-2 px-2 py-2 
                           {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
-                   <i class="fas fa-users fa-xl me-3"></i>
-                   <span>Manage Users</span>
+                    <span class="icon justify-content-center align-items-center">
+                        <i class="fas fa-users fa-xl"></i>
+                    </span>
+                    <span class="ms-2">Manage Users</span>
                   </a>
                   <div class="mt-4 px-2 text-uppercase text-white-50 small">Manage Resources</div>
 
@@ -77,7 +82,6 @@
 
         {{-- Bootstrap JS --}}
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     </body>
 </html>
  

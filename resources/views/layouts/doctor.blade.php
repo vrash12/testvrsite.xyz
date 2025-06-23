@@ -20,10 +20,10 @@
     <div class="d-flex">
 
         {{-- Sidebar --}}
-        <aside class="sidebar bg-primary text-white p-3 vh-100">
+        <aside class="sidebar bg-primary text-white p-3 vh-100 flex-shrink-0">
 
             {{-- Top --}}
-            <div class="text-center mb-4">
+            <div class="text-center mb-6">
                 <img src="{{ asset('images/patientcare-logo-white.png') }}" alt="Logo" class="logo img-fluid mt-2 mb-4">
                 <div class="avatar rounded-circle mx-auto mb-2"></div>
                 <strong>{{ Auth::user()->username ?? 'Physician User' }}</strong><br>
@@ -31,14 +31,14 @@
             </div>
 
             {{-- Navigation --}}
-            <nav class="nav flex-column sidebar-nav ms-2 mt-4">
+            <nav class="mb-auto ms-2 mt-4">
 
-                <a href="{{ route('doctor.dashboard') }}" class="nav-link d-flex align-items-center text-white">
+                <a href="{{ route('') }}" class="nav-link d-flex align-items-center text-white">
                     <i class="fas fa-home fa-xl me-3"></i>
                     <span>Home</span>
                 </a>
 
-                <a href="{{ route('doctor.dashboard') }}" class="nav-link d-flex align-items-center text-white">
+                <a href="{{ route('') }}" class="nav-link d-flex align-items-center text-white">
                     <i class="fas fa-prescription fa-xl me-3"></i>
                     <span>Prescribe</span>
                 </a>

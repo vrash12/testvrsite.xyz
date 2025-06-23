@@ -1,4 +1,5 @@
 {{-- resources/views/layouts/pharmacy.blade.php --}}
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -20,10 +21,10 @@
     <div class="d-flex">
 
       {{-- Sidebar --}}
-      <aside class="sidebar bg-primary text-white p-3 vh-100">
+      <aside class="sidebar bg-primary text-white p-3 vh-100 flex-shrink-0">
 
           {{-- Top --}}
-          <div class="text-center mb-4">
+          <div class="text-center mb-6">
               <img src="{{ asset('images/patientcare-logo-white.png') }}" class="logo img-fluid mt-2 mb-4" alt="Logo">
               <div class="avatar rounded-circle mx-auto mb-2"></div>
               <strong>{{ Auth::user()->username ?? 'Pharmacist User' }}</strong><br>
@@ -31,26 +32,33 @@
           </div>
 
           {{-- List Routes --}}
-          <nav class="nav flex-column sidebar-nav ms-2 mt-4">
+          <nav class="mb-auto ms-2 mt-4">
 
               <a href="{{ route('pharmacy.dashboard') }}"
-                 class="nav-link d-flex align-items-center text-white {{ request()->routeIs('pharmacy.dashboard') ? 'active' : '' }}">
-                  <i class="fas fa-home fa-xl me-3"></i>
-                  <span>Home</span>
+                 class="nav-link d-flex text-white gap-2 px-2 py-2 
+                 {{ request()->routeIs('pharmacy.dashboard') ? 'active' : '' }}">
+                  <span class="icon justify-content-center align-items-center">
+                        <i class="fas fa-home fa-xl"></i>
+                  </span>
+                  <span class="ms-2">Home</span>
               </a>
 
               <a href="{{ route('pharmacy.medicines.index') }}"
-                 class="nav-link d-flex align-items-center text-white 
+                 class="nav-link d-flex text-white gap-2 px-2 py-2
                  {{ request()->routeIs('pharmacy.medicines.*') ? 'active' : '' }}">
-                  <i class="fas fa-medkit fa-xl me-3"></i>
-                  <span>Medicines</span>
+                  <span class="icon justify-content-center align-items-center">
+                        <i class="fas fa-medkit fa-xl"></i>
+                  </span>
+                  <span class="ms-2">Queue</span>
               </a>
 
               <a href="{{ route('pharmacy.medicines.create') }}"
-                 class="nav-link d-flex align-items-center text-white 
+                 class="nav-link d-flex text-white gap-2 px-2 py-2
                  {{ request()->routeIs('pharmacy.medicine.create') ? 'active' : '' }}">
-                  <i class="fas fa-pills fa-xl me-3"></i>
-                  <span>New Medication Charge</span>
+                  <span class="">
+                        <i class="fas fa-pills fa-xl"></i>
+                  </span>
+                  <span class="ms-2">New Med Charge</span>
               </a>
 
           </nav>
