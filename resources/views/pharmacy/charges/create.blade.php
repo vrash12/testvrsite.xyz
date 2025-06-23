@@ -46,18 +46,18 @@
           <div class="col-md-2">
             <label class="form-label">Quantity</label>
             <input type="number" name="medications[0][quantity]" min="1" 
-                   class="form-control @error('medications.0.quantity') is-invalid @enderror" required>
+                   class="form-control quantity-input @error('medications.0.quantity') is-invalid @enderror" required>
             @error('medications.0.quantity')
               <div class="invalid-feedback">{{ $message }}</div>
             @enderror
           </div>
           <div class="col-md-2">
             <label class="form-label">Unit Price</label>
-            <input type="text" readonly class="form-control-plaintext">
+            <input type="text" readonly class="form-control-plaintext border border-info unit-price">
           </div>
           <div class="col-md-2">
             <label class="form-label">Total</label>
-            <input type="text" readonly class="form-control-plaintext">
+            <input type="text" readonly class="form-control-plaintext border border-warning total-price">
           </div>
         </div>
       </div>
@@ -109,9 +109,9 @@
   let idx = 1;
   document.getElementById('add-medication').addEventListener('click', () => {
     const tpl = document.querySelector('.medication-item').cloneNode(true);
-    tpl.querySelector('h6').textContent = `Medication #${++idx}`;
+    tpl.querySelector('h6').textContent = `Medication #${idx + 1}`;
     tpl.querySelectorAll('select, input').forEach(el => {
-      const name = el.getAttribute('name').replace(/\[\d+\]/, `[${idx-1}]`);
+      const name = el.getAttribute('name').replace(/\[\d+\]/, `[${idx}]`);
       el.name = name;
       if (el.type !== 'select-one') el.value = '';
     });

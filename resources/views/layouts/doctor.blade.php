@@ -12,7 +12,15 @@
         {{-- Font Awesome --}}
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
         {{-- CSS --}}
-        <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+        <style>
+            .sidebar{width:240px; display:flex; flex-direction:column; background-color:#00529A ;}
+            .logo{ width:80px } 
+            .avatar { width:90px; height: 90px; background-color: aliceblue; }
+            .nav-link {transition: background-color 0.2s ease; border-radius: 0.375rem;}
+            .nav-link:hover { background-color: rgba(255, 255, 255, 0.2); color: #fff !important; }
+            nav .icon{ width: 30px;}
+            .hdng{font-size: 1.5em;}
+        </style>
         
     </head>
     <body>
@@ -68,5 +76,8 @@
 
     {{-- Bootstrap JS --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+        @stack('scripts')
+
     </body>
 </html>
