@@ -1,3 +1,5 @@
+{{-- resources/views/supplies/queue.blade.php --}}
+
 @extends('layouts.supplies')
 
 @section('content')
@@ -44,7 +46,7 @@
 
             {{-- Table --}}
             <div class="row border my-2 mx-1">
-               <div class="table-responsive">
+               <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
@@ -80,8 +82,85 @@
                             </tr>   
                             @endforelse
                         </tbody>
+                        <tbody id="completed-row">
+                            {{-- Completed Requests Below --}}
+                        </tbody>
                     </table>
                </div>
             </div>
     </div>
+
+@push('scripts')
+    <script>
+        // Confirm Approvals Dialog Box, Change Status
+        const cfBtn = document.querySelectorAll('.confirm-btn');
+
+        cfBtn.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const row = btn.closest('tr'); 
+
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: "You wont be able to revert this!",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor:"#00529A",
+                    cancelButtonColor: "#d33",
+                    confirmButtonText: "Confirm"
+                }).then((result)=>{
+                    if(result.isConfirmed){
+                        // Update Status Badge: Pending -> Completed
+                        const statusBadge = row.querySelector('.badge');
+                        statusBadge.classList.remove('bg-warning', 'text-dark');
+                        statusBadge.classList.add('bg-success', 'text-white');
+                        statusBadge.textContent = 'Completed';
+
+                         // Remove Confirm Button
+                        btn.remove();
+
+                        // Move completed Rows Below
+                        const completedBody = document.getElementById('completed-row');
+                        completedBody.appendChild(row);
+
+                        // Success Alert
+                        Swal.fire({
+                            title: "Confirmed",
+                            text: "Request marked as completed.",
+                            icon: "success"                       
+                        })
+                    }
+                })
+            });
+        });
+
+    </script>
+@endpush
 @endsection
+
+
+{{-- 
+
+Needs Improvement for
+- Confirm Dialog Box
+- Pending - Completed Status 
+- Filter Does not work
+
+@if(session('success'))
+  <div class="alert alert-success alert-dismissible fade show mt-2" role="alert">
+    {{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+@endif
+
+
+@if($miscReq->status == 'pending')
+  <a href="{{ route('supplies.markCompleted', $miscReq->id) }}" class="btn btn-sm btn-outline-success">
+    <i class="fa-solid fa-check"></i> Confirm
+  </a>
+@else
+  <span class="text-muted"><i class="fa-solid fa-check-double"></i> Completed</span>
+@endif
+
+
+
+--}}
