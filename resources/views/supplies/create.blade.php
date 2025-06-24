@@ -11,7 +11,7 @@
     <h1 class="hdng">Add New Miscellaneous Charge</h1>
     <p>Add new manual charge to patients</p>
 
-    <form method="POST" action="route{{  }}">
+    <form method="POST" action="route{{  }}" id="misc-form">
         @csrf
 
         {{-- Select Patient --}}
@@ -96,7 +96,7 @@
         {{-- Actions --}}
         <div class="text-end">
             <a href="{{ route('supplies.dashboard') }}" class="btn btn-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary">Checkout</button>
+            <button type="submit" class="btn btn-primary">Next</button>
         </div>
     </div>
     </form>
@@ -107,7 +107,6 @@
     <script>
 
         let idx = 1;
-
         const addBtn = document.getElementById('add-item');
         const miscList = document.getElementById('misc-list');
 
@@ -136,7 +135,7 @@
         // Remove Button
         miscList.addEventListener('click', function(e){
            
-            if(e.target.classList.contains('remove-supply')){
+            if(e.target.closest('.remove-supply')){
                 const items = miscList.querySelectorAll('.misc-item');
                 if(items.length > 1){
                     e.target.closest('.misc-item').remove();
@@ -154,8 +153,10 @@
                 el.querySelector('h6').textContent = `Item #${i+1}`
             })
         }
-    
+
+       
+        // Auto-calculate unit price, line total, and grand total
+
     </script>  
 @endpush
-
 @endsection
