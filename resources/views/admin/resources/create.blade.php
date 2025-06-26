@@ -1,4 +1,3 @@
-{{-- resources/views/admin/resources/create.blade.php --}}
 @extends('layouts.admin')
 
 @section('content')
@@ -18,13 +17,15 @@
         <strong>New Room</strong>
       </div>
       <div class="card-body">
-        <form action="{{ route('admin.rooms.store') }}" method="POST">
+        <form action="{{ route('admin.resources.store') }}" method="POST">
           @csrf
+          <input type="hidden" name="type" value="room">
 
           <div class="mb-3">
             <label for="department_id" class="form-label">Department</label>
             <select name="department_id" id="department_id"
-                    class="form-select @error('department_id') is-invalid @enderror" required>
+                    class="form-select @error('department_id') is-invalid @enderror"
+                    required>
               <option value="">Select department…</option>
               @foreach($departments as $d)
                 <option value="{{ $d->department_id }}"
@@ -48,9 +49,14 @@
           <div class="mb-3">
             <label for="status" class="form-label">Status</label>
             <select name="status" id="status"
-                    class="form-select @error('status') is-invalid @enderror" required>
-              <option value="available" {{ old('status')=='available'?'selected':'' }}>Available</option>
-              <option value="unavailable" {{ old('status')=='unavailable'?'selected':'' }}>Unavailable</option>
+                    class="form-select @error('status') is-invalid @enderror"
+                    required>
+              <option value="available" {{ old('status')=='available'?'selected':'' }}>
+                Available
+              </option>
+              <option value="unavailable" {{ old('status')=='unavailable'?'selected':'' }}>
+                Unavailable
+              </option>
             </select>
             @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
@@ -68,13 +74,15 @@
         <strong>New Bed</strong>
       </div>
       <div class="card-body">
-        <form action="{{ route('admin.beds.store') }}" method="POST">
+        <form action="{{ route('admin.resources.store') }}" method="POST">
           @csrf
+          <input type="hidden" name="type" value="bed">
 
           <div class="mb-3">
             <label for="room_id" class="form-label">Room</label>
             <select name="room_id" id="room_id"
-                    class="form-select @error('room_id') is-invalid @enderror" required>
+                    class="form-select @error('room_id') is-invalid @enderror"
+                    required>
               <option value="">Select room…</option>
               @foreach($rooms as $r)
                 <option value="{{ $r->room_id }}"
@@ -98,9 +106,14 @@
           <div class="mb-3">
             <label for="status" class="form-label">Status</label>
             <select name="status" id="status"
-                    class="form-select @error('status') is-invalid @enderror" required>
-              <option value="available" {{ old('status')=='available'?'selected':'' }}>Available</option>
-              <option value="occupied" {{ old('status')=='occupied'?'selected':'' }}>Occupied</option>
+                    class="form-select @error('status') is-invalid @enderror"
+                    required>
+              <option value="available" {{ old('status')=='available'?'selected':'' }}>
+                Available
+              </option>
+              <option value="occupied" {{ old('status')=='occupied'?'selected':'' }}>
+                Occupied
+              </option>
             </select>
             @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>

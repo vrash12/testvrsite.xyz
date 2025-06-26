@@ -1,11 +1,11 @@
-{{--resources/views/patient/dashboard.blade.php--}}
+{{-- resources/views/patient/dashboard.blade.php --}}
 @extends('layouts.patients')
 
 @section('content')
 <div class="container-fluid">
   {{-- Greeting --}}
   <div class="mb-5">
-    <h1>Hello, <span class="text-primary">{{ $patient->username }}</span>!</h1>
+    <h1>Hello, <span class="text-primary">{{ $user->username }}</span>!</h1>
     <p class="text-muted">
       Welcome to your patient portal! A hub for patients to access medical records and bills anytime, anywhere.
     </p>
@@ -20,7 +20,7 @@
           <i class="fas fa-user fa-2x text-secondary me-3"></i>
           <div>
             <div class="text-muted">PATIENT ID</div>
-            <strong>{{ str_pad($patient->user_id,8,'0',STR_PAD_LEFT) }}</strong>
+            <strong>{{ str_pad($user->patient_id, 8, '0', STR_PAD_LEFT) }}</strong>
           </div>
         </div>
       </div>
@@ -46,7 +46,9 @@
           <i class="fas fa-ticket-alt fa-2x text-secondary me-3"></i>
           <div>
             <div class="text-muted">LATEST ADMIT DATE</div>
-            <strong>{{ optional($admission)->admission_date?->format('m/d/y') ?? '—' }}</strong>
+            <strong>
+              {{ optional($admission)->admission_date?->format('m/d/y') ?? '—' }}
+            </strong>
           </div>
         </div>
       </div>
@@ -61,26 +63,27 @@
           <i class="fas fa-peso-sign fa-2x text-secondary me-3"></i>
           <div>
             <div class="text-muted">AMOUNT DUE</div>
-            <strong>{{ number_format($amountDue,2) }}</strong>
+            <strong>₱{{ number_format($amountDue, 2) }}</strong>
           </div>
         </div>
       </div>
     </div>
-    {{-- two placeholders */}
+    {{-- placeholders --}}
     <div class="col-md-3"><div class="card shadow-sm" style="height:100%"></div></div>
     <div class="col-md-3"><div class="card shadow-sm" style="height:100%"></div></div>
   </div>
 
+  {{-- Detail Cards --}}
   <div class="row g-4">
-    {{-- Prescriptions --}}
+    {{-- Prescriptions to Take --}}
     <div class="col-md-4">
       <div class="card shadow-sm h-100">
         <div class="card-header">PRESCRIPTIONS TO TAKE</div>
         <ul class="list-group list-group-flush">
           @forelse($prescriptions as $p)
             <li class="list-group-item d-flex justify-content-between align-items-center">
-              {{ $p->service->service_name }} {{ $p->quantity_given }}
-              <span class="text-success">{{ $p->frequency_text ?? '—' }}</span>
+              {{ $p->service->service_name }}
+              <span class="text-success">— pending dispensing</span>
             </li>
           @empty
             <li class="list-group-item text-center text-muted">No prescriptions</li>
@@ -89,7 +92,7 @@
       </div>
     </div>
 
-    {{-- Today's Schedule --}}
+    {{-- Your Schedule Today --}}
     <div class="col-md-4">
       <div class="card shadow-sm h-100">
         <div class="card-header">YOUR SCHEDULE TODAY</div>
@@ -97,9 +100,13 @@
           @forelse($todaySchedule as $s)
             <li class="list-group-item d-flex justify-content-between">
               <div>
-                <small class="text-muted">{{ $s->service->department->department_name }}</small><br>
+                <small class="text-muted">
+                  {{ $s->service->department->department_name }}
+                </small><br>
                 <strong>{{ $s->service->service_name }}</strong><br>
-                <small>{{ \Carbon\Carbon::parse($s->datetime)->format('h:ia') }}</small>
+                <small>
+                  {{ \Carbon\Carbon::parse($s->datetime)->format('h:ia') }}
+                </small>
               </div>
               <i class="fas fa-procedures fa-2x text-secondary"></i>
             </li>

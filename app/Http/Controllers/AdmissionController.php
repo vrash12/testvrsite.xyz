@@ -12,6 +12,8 @@ use App\Models\InsuranceProvider;
 use App\Models\PaymentMethod;
 use Illuminate\Http\Request;
 use App\Models\Room;
+use App\Models\Admission;
+use App\Models\User;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -162,6 +164,15 @@ class AdmissionController extends Controller
             'email'    => $generatedEmail,
             'password' => $plainPassword,      // will be hashed by Patient::setPasswordAttribute
         ]);
+
+        \App\Models\User::create([
+    'patient_id'   => $patient->patient_id,
+    'username'     => "{$patient->patient_first_name}.{$patient->patient_last_name}",
+    'email'        => $generatedEmail,
+    'password'     => $plainPassword,   // will be hashed by User mutator
+    'role'         => 'patient',
+    // department_id, room_id, bed_id default to null
+]);
 
         DB::commit();
 

@@ -44,7 +44,7 @@
                 {{-- Middle --}}
                 <nav class="mb-auto mt-4 ms-2">
                     {{-- Home --}}
-                    <a href="{{ route('') }}"  class="nav-link d-flex text-white px-2 py-2 gap-2">
+                    <a href="{{ route('supplies.dashboard') }}"  class="nav-link d-flex text-white px-2 py-2 gap-2">
                         <span class="icon justify-content-center align-items-center">
                             <i class="fas fa-home fa-xl"></i>
                         </span>
@@ -52,7 +52,7 @@
                     </a>
 
                     {{-- Add Charges --}}
-                    <a href="{{ route('') }}"  class="nav-link d-flex text-white px-2 py-2 gap-2">
+                    <a href="{{ route('supplies.create') }}"  class="nav-link d-flex text-white px-2 py-2 gap-2">
                         <span class="icon justify-content-center align-items-center">
                             <i class="fa-solid fa-suitcase-medical fa-xl"></i>
                         </span>

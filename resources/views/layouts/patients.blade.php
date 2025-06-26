@@ -12,17 +12,22 @@
       {{-- Font Awesome --}}
       <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
       {{-- CSS --}}
-        <style>
-            .sidebar{width:240px; display:flex; flex-direction:column; background-color:#00529A ;}
-            .logo{ width:80px } 
-            .avatar { width:90px; height: 90px; background-color: aliceblue; }
-            .nav-link {transition: background-color 0.2s ease; border-radius: 0.375rem;}
-            .nav-link:hover { background-color: rgba(255, 255, 255, 0.2); color: #fff !important; }
-            nav .icon{ width: 30px;}
-            .hdng{font-size: 1.5em;}
-        </style>
+      <style>
+          .sidebar{width:240px; display:flex; flex-direction:column; background-color:#00529A ;}
+          .logo{ width:80px } 
+          .avatar { width:90px; height: 90px; background-color: aliceblue; }
+          .nav-link {transition: background-color 0.2s ease; border-radius: 0.375rem;}
+          .nav-link:hover { background-color: rgba(255, 255, 255, 0.2); color: #fff !important; }
+          nav .icon{ width: 30px;}
+          .hdng{font-size: 1.5em;}
+      </style>
   </head>
   <body>
+
+    @php
+        // Pull the authenticated patient from the patient guard
+        $patient = Auth::guard('patient')->user();
+    @endphp
 
     <div class="d-flex">
 
@@ -33,45 +38,43 @@
         <div class="text-center mb-6">
             <img src="{{ asset('images/patientcare-logo-white.png') }}" alt="Logo" class="logo img-fluid mt-2 mb-4">
             <div class="avatar rounded-circle mx-auto mb-2"></div>
-            <strong>{{ Auth::user()->username ?? 'Patient User' }}</strong><br>
-            <small>Patient ID: {{ Auth::id() }}</small>
+            <strong>{{ $patient->username ?? 'Patient User' }}</strong><br>
+            <small>Patient ID: {{ Auth::guard('patient')->id() }}</small>
         </div>
 
         {{-- Navigation --}}
         <nav class="mb-auto ms-2 mt-4">
-
-            <a href="{{ route('') }}" 
-            class="nav-link d-flex text-white gap-2 px-2 py-2">
+            <a href="{{ route('patient.dashboard') }}" 
+               class="nav-link d-flex text-white gap-2 px-2 py-2">
                 <span class="icon justify-content-center align-items-center">
                     <i class="fas fa-home fa-xl"></i>
                 </span>
                 <span class="ms-2">Home</span>
             </a>
 
-            <a href="{{ route('') }}" 
-            class="nav-link d-flex text-white gap-2 px-2 py-2">
+            <a href="#" 
+               class="nav-link d-flex text-white gap-2 px-2 py-2">
                 <span class="icon justify-content-center align-items-center">
-                    <i class="fas fa-home fa-xl"></i>
+                    <i class="fas fa-user-circle fa-xl"></i>
                 </span>
                 <span class="ms-2">My Account</span>
             </a>
 
-            <a href="{{ route('') }}" 
-            class="nav-link d-flex text-white gap-2 px-2 py-2">
+            <a href="#" 
+               class="nav-link d-flex text-white gap-2 px-2 py-2">
                <span class="icon justify-content-center align-items-center">
                     <i class="fas fa-file-invoice-dollar fa-xl"></i>
                </span>
                 <span class="ms-2">Billing</span>
             </a>
 
-            <a href="{{ route('') }}" 
-            class="nav-link d-flex text-white gap-2 px-2 py-2">
+            <a href="#" 
+               class="nav-link d-flex text-white gap-2 px-2 py-2">
                <span class="icon justify-content-center align-items-center">
                     <i class="fas fa-bell fa-xl"></i>
                </span>
-                <span class="ms-2">Notification</span>
+                <span class="ms-2">Notifications</span>
             </a>
-
         </nav>
 
         {{-- Footer --}}
@@ -97,7 +100,6 @@
 
     {{-- Bootstrap JS --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-        @stack('scripts')
+    @stack('scripts')
   </body>
 </html>

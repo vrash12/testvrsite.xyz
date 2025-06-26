@@ -1,7 +1,5 @@
 <?php
-
-namespace App\Http\Controllers\Pharmacy;
-
+// app/Http/Controllers/Pharmacy/ChargeController.php
 use App\Http\Controllers\Controller;
 use App\Models\PharmacyCharge;
 use App\Models\PharmacyChargeItem;

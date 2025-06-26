@@ -42,7 +42,10 @@ class Patient extends Authenticatable
        
     ];
 
- 
+ public function user(): HasOne   // <-- add
+{
+    return $this->hasOne(User::class, 'patient_id');
+}
     protected $casts = [
         'patient_birthday' => 'date',
     ];

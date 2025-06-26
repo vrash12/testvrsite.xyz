@@ -1,4 +1,3 @@
-{{-- resources/views/admin/resources/edit.blade.php --}}
 @extends('layouts.admin')
 
 @section('content')
@@ -11,22 +10,25 @@
 
 <div class="row">
 
-  {{-- If we’re editing a Room --}}
+  {{-- Editing a Room --}}
   @isset($room)
     <div class="col-md-6">
       <div class="card mb-4">
         <div class="card-header">
-          <strong>Edit Room &ldquo;{{ $room->room_number }}&rdquo;</strong>
+          <strong>Edit Room “{{ $room->room_number }}”</strong>
         </div>
         <div class="card-body">
-          <form action="{{ route('admin.rooms.update', $room) }}" method="POST">
+          <form action="{{ route('admin.resources.update', ['type'=>'room','id'=>$room->room_id]) }}"
+                method="POST">
             @csrf
             @method('PUT')
+            <input type="hidden" name="type" value="room">
 
             <div class="mb-3">
               <label for="department_id" class="form-label">Department</label>
               <select name="department_id" id="department_id"
-                      class="form-select @error('department_id') is-invalid @enderror" required>
+                      class="form-select @error('department_id') is-invalid @enderror"
+                      required>
                 <option value="">Select department…</option>
                 @foreach($departments as $d)
                   <option value="{{ $d->department_id }}"
@@ -50,9 +52,16 @@
             <div class="mb-3">
               <label for="status" class="form-label">Status</label>
               <select name="status" id="status"
-                      class="form-select @error('status') is-invalid @enderror" required>
-                <option value="available"   {{ old('status', $room->status)=='available'   ? 'selected':'' }}>Available</option>
-                <option value="unavailable" {{ old('status', $room->status)=='unavailable' ? 'selected':'' }}>Unavailable</option>
+                      class="form-select @error('status') is-invalid @enderror"
+                      required>
+                <option value="available"
+                  {{ old('status', $room->status)=='available' ? 'selected':'' }}>
+                  Available
+                </option>
+                <option value="unavailable"
+                  {{ old('status', $room->status)=='unavailable' ? 'selected':'' }}>
+                  Unavailable
+                </option>
               </select>
               @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
@@ -64,22 +73,25 @@
     </div>
   @endisset
 
-  {{-- If we’re editing a Bed --}}
+  {{-- Editing a Bed --}}
   @isset($bed)
     <div class="col-md-6">
       <div class="card mb-4">
         <div class="card-header">
-          <strong>Edit Bed &ldquo;{{ $bed->bed_number }}&rdquo;</strong>
+          <strong>Edit Bed “{{ $bed->bed_number }}”</strong>
         </div>
         <div class="card-body">
-          <form action="{{ route('admin.beds.update', $bed) }}" method="POST">
+          <form action="{{ route('admin.resources.update', ['type'=>'bed','id'=>$bed->bed_id]) }}"
+                method="POST">
             @csrf
             @method('PUT')
+            <input type="hidden" name="type" value="bed">
 
             <div class="mb-3">
               <label for="room_id" class="form-label">Room</label>
               <select name="room_id" id="room_id"
-                      class="form-select @error('room_id') is-invalid @enderror" required>
+                      class="form-select @error('room_id') is-invalid @enderror"
+                      required>
                 <option value="">Select room…</option>
                 @foreach($rooms as $r)
                   <option value="{{ $r->room_id }}"
@@ -103,9 +115,16 @@
             <div class="mb-3">
               <label for="status" class="form-label">Status</label>
               <select name="status" id="status"
-                      class="form-select @error('status') is-invalid @enderror" required>
-                <option value="available" {{ old('status', $bed->status)=='available'?'selected':'' }}>Available</option>
-                <option value="occupied"  {{ old('status', $bed->status)=='occupied' ? 'selected':'' }}>Occupied</option>
+                      class="form-select @error('status') is-invalid @enderror"
+                      required>
+                <option value="available"
+                  {{ old('status', $bed->status)=='available' ? 'selected':'' }}>
+                  Available
+                </option>
+                <option value="occupied"
+                  {{ old('status', $bed->status)=='occupied' ? 'selected':'' }}>
+                  Occupied
+                </option>
               </select>
               @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>

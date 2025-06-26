@@ -14,15 +14,43 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\Admin\ResourceController;
-use App\Http\Controllers\ChargeController;
+use App\Http\Controllers\SuppliesController;
+use App\Http\Controllers\PatientDashboardController;
+use App\Http\Controllers\Pharmacy\ChargeController;
 
 
 
-Route::prefix('patient')->name('patient.')->middleware('auth:patient')->group(function(){
-    Route::get('/dashboard', [\App\Http\Controllers\PatientController::class, 'dashboard'])
-         ->name('dashboard');
-    // … other patient‐only routes
-});
+Route::prefix('patient')
+     ->name('patient.')
+     ->middleware('auth')
+     ->group(function(){
+         Route::get('dashboard', [PatientDashboardController::class, 'dashboard'])
+              ->name('dashboard');
+         // … any other patient‐only pages …
+     });
+
+     Route::middleware('auth')
+     ->prefix('supplies')
+     ->name('supplies.')
+     ->group(function(){
+         Route::get('dashboard',      [SuppliesController::class,'dashboard'])
+              ->name('dashboard');
+
+         Route::get('create',         [SuppliesController::class,'create'])
+              ->name('create');
+
+         Route::post('/',             [SuppliesController::class,'store'])
+              ->name('store');
+
+         Route::get('queue',          [SuppliesController::class,'queue'])
+              ->name('queue');
+
+         Route::get('{id}',           [SuppliesController::class,'show'])
+              ->name('show');
+
+         Route::post('{id}/complete', [SuppliesController::class,'markCompleted'])
+              ->name('complete');
+     });
 
 
 Route::middleware('auth')->get('/dashboard', function () {
@@ -80,12 +108,18 @@ Route::middleware(['auth'])
 Route::post('users/{user}/assign',
     [AdminUsersController::class,'updateAssignment'])
     ->name('users.assign.update');
-      Route::get('resources', [ResourceController::class,'index'])
-              ->name('resources.index');
-            Route::get('resources/create', [ResourceController::class,'create'])
-                ->name('resources.create');
-                //edit
-Route::resource('users', AdminUsersController::class);
+   Route::get  ('resources',              [ResourceController::class,'index'])->name('resources.index');
+    Route::get  ('resources/create',       [ResourceController::class,'create'])->name('resources.create');
+    Route::post ('resources',              [ResourceController::class,'store'])->name('resources.store');
+
+    // edit/update/destroy for both rooms & beds:
+    Route::get    ('resources/{type}/{id}/edit',   [ResourceController::class,'edit'])
+           ->where('type','room|bed')->name('resources.edit');
+    Route::put    ('resources/{type}/{id}',        [ResourceController::class,'update'])
+           ->where('type','room|bed')->name('resources.update');
+    Route::delete ('resources/{type}/{id}',        [ResourceController::class,'destroy'])
+           ->where('type','room|bed')->name('resources.destroy');
+
 
       });
 

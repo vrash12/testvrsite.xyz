@@ -1,5 +1,5 @@
 <?php
-
+//config/auth.php
 return [
     'defaults' => [
         'guard' => 'web', // you can keep this as `web` for the default login
