@@ -19,7 +19,7 @@
             .nav-link {transition: background-color 0.2s ease; border-radius: 0.375rem;}
             .nav-link:hover { background-color: rgba(255, 255, 255, 0.2); color: #fff !important; }
             nav .icon{ width: 30px;}
-            .hdng{font-size: 1.5em;}
+            .hdng{font-size: 1.5em; color:#00529A;}
         </style>
 
   </head>
@@ -73,7 +73,7 @@
           <div class="footer text-center mt-auto pt-4">
               <form method="POST" action="{{ route('logout') }}">
                   @csrf
-                  <button type="submit" class="btn btn-sm btn-outline-light w-100 text-start p-2">
+                  <button type="submit" class="btn btn-sm btn-outline-light w-100 text-start p-2 mb-2">
                       <i class="fas fa-sign-out-alt fa-xl me-2"></i> Logout
                   </button>
               </form>

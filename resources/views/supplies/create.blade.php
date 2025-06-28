@@ -8,32 +8,31 @@
 
     {{-- Top --}}
     <div>
-    <h1 class="hdng">Add New Miscellaneous Charge</h1>
-    <p>Add new manual charge to patients</p>
+        <h1 class="hdng">Add New Miscellaneous Charge</h1>
+        <p>Add new manual charge to patients</p>
 
-    <form method="POST" action="route{{  }}" id="misc-form">
-        @csrf
+        <form method="POST" action="route{{  }}" id="misc-form">
+            @csrf
 
-        {{-- Select Patient --}}
-        <div class="mb-3">
-            <label class="form-label">Patient</label>
-            <select name="patient_id" class="form-select @error('patient_id') is-invalid @enderror" required>
-                <option value="">Select patient...</option>
-                @foreach ($patients as $p)
-                    <option value="{{ $p->patient_id }}" 
-                        @selected(old('patient_id')==$p->patient_id)>
-                        {{ $p->patient_first_name }} {{ $p->patient_last_name }}
-                    </option>
-                @endforeach
-            </select>
-            @error('patient_id')
-                <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
-        </div>
+            {{-- Select Patient --}}
+            <div class="mb-3">
+                <label class="form-label">Patient</label>
+                <select name="patient_id" class="form-select @error('patient_id') is-invalid @enderror" required>
+                    <option value="">Select patient...</option>
+                    @foreach ($patients as $p)
+                        <option value="{{ $p->patient_id }}" 
+                            @selected(old('patient_id')==$p->patient_id)>
+                            {{ $p->patient_first_name }} {{ $p->patient_last_name }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('patient_id')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
     </div>
 
     <div class="border p-3 my-3 flex-grow-1 d-flex flex-column" style="max-height: 350px; overflow-y: auto;">
-
           {{-- Misc Dynamic --}}
         <div id="misc-list">
             <div class="misc-item mt-1 border p-3">
