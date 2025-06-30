@@ -9,10 +9,13 @@
             <p>Welcome to Notifications! Here you can stay updated on things about your bill</p>
         </div>
 
+        {{-- Caution --}}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-circle-info me-2"></i><strong>Important!</strong> Do not share this information with anyone else.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
         <div>
-            @if ($notifications->isEmpty())
-                <div class="alert alert-info m-2">You have no notifications yet.</div>
-            @else
             <div class="card">
                 <div class="card-body table-responsive" style="max-height: 70vh">
                     <table class="table table-hover align-middle">
@@ -27,7 +30,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($notifications as $notif)
+                            @forelse ($notifications as $notif)
                                 <tr class="{{ $notif->read ? '' : 'table-warning' }}">
                                     <td><i class="fa-solid fa-circle-dot text-primary"></i> {{ $notif->type }}</td>
                                     <td>{{$notif->title }} </td>
@@ -41,7 +44,9 @@
                                         @endif
                                     </td>
                                 </tr>
-                            @endforeach
+                            @empty
+                               <td colspan="5" class="text-center text-muted">No notifications found.</td>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
