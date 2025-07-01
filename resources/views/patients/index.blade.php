@@ -42,39 +42,55 @@
         <th>Actions</th>
       </tr>
     </thead>
-    <tbody>
-      @foreach($patients as $patient)
-        <tr>
-          <td>{{ $patient->patient_id }}</td>
-          <td>{{ $patient->patient_first_name }} {{ $patient->patient_last_name }}</td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td>
-          @php
-            $status = strtolower($patient->status);
-            $badgeClass = match($status) {
-                'active' => 'bg-success',
-                'completed' => 'bg-primary',
-                'pending' => 'bg-warning',
-                default => 'bg-secondary'
-            };
-          @endphp
+<tbody>
+  @foreach($patients as $patient)
+    <tr>
+      <td>{{ $patient->patient_id }}</td>
+      <td>{{ $patient->patient_first_name }} {{ $patient->patient_last_name }}</td>
 
-          <span class="badge text-white {{ $badgeClass }}">
-            {{ ucfirst($status) }}
-          </span>
-        </td>
-          <td>
-          <a href="{{ route('admission.patients.show', $patient) }}"
-              class="btn btn-sm btn-primary">
-           <i class="fa-solid fa-eye me-2"></i> View
-          </a>
+      {{-- Room --}}
+      <td>
+        {{ $patient->admissionDetail?->room_number ?? '—' }}
+      </td>
 
-          </td>
-        </tr>
-      @endforeach
-    </tbody>
+      {{-- Admission Date --}}
+      <td>
+        {{ $patient->admissionDetail?->admission_date?->format('Y-m-d') ?? '—' }}
+      </td>
+
+      {{-- Assigned Doctor --}}
+      <td>
+        {{ $patient->admissionDetail?->doctor?->doctor_name ?? '—' }}
+      </td>
+
+      {{-- Status --}}
+      <td>
+        @php
+          $badge = match(strtolower($patient->status)) {
+            'active'    => 'bg-success',
+            'completed' => 'bg-primary',
+            'pending'   => 'bg-warning',
+            default     => 'bg-secondary'
+          };
+        @endphp
+        <span class="badge text-white {{ $badge }}">
+          {{ ucfirst($patient->status) }}
+        </span>
+      </td>
+
+      {{-- Actions --}}
+      <td>
+        <a href="{{ route('admission.patients.show', $patient) }}"
+           class="btn btn-sm btn-primary">
+          <i class="fa-solid fa-eye me-2"></i> View
+        </a>
+      </td>
+    </tr>
+  @endforeach
+</tbody>
+
+
+
     </table>
 
 </div>

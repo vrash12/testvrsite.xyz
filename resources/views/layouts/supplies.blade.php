@@ -58,6 +58,14 @@
                         </span>
                         <span class="ms-2">Patient</span>
                     </a>
+
+               
+                    <a href="{{ route('supplies.queue') }}" class="nav-link d-flex text-white px-2 py-2 gap-2">
+                        <span class="icon justify-content-center align-items-center">
+                            <i class="fas fa-list-check fa-xl"></i>
+                        </span>
+                        <span class="ms-2">Queue</span>
+                    </a>
                 </nav>
 
                 {{-- Footer --}}

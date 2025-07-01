@@ -16,7 +16,7 @@ class HospitalService extends Model
         'department_id',
         'price',
         'description',
-        // (no quantity here if you use the stock‐movements approach)
+  'quantity', 
     ];
 
     public function department()

@@ -3,19 +3,36 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
 class Room extends Model
 {
     protected $primaryKey = 'room_id';
     public $timestamps = true;
 
-    public function department()
-    {
-        return $this->belongsTo(Department::class, 'department_id', 'department_id');
-    }
+    protected $fillable = [
+        'department_id',
+        'room_number',
+        'status',
+        'capacity',       // ← new
+    ];
 
     public function beds()
     {
         return $this->hasMany(Bed::class, 'room_id', 'room_id');
+    }
+
+    /**
+     * How many beds are occupied?
+     */
+    public function occupiedCount()
+    {
+        return $this->beds()->whereNotNull('patient_id')->count();
+    }
+
+    /**
+     * Is this room at full capacity?
+     */
+    public function isFull(): bool
+    {
+        return $this->occupiedCount() >= $this->capacity;
     }
 }

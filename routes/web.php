@@ -11,14 +11,25 @@ use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminUsersController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\LoginController;
 use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\Admin\ResourceController;
 use App\Http\Controllers\SuppliesController;
 use App\Http\Controllers\PatientDashboardController;
 use App\Http\Controllers\Pharmacy\ChargeController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PatientBillingController;
+use App\Http\Controllers\PatientDisputeController;
+use App\Http\Controllers\PatientNotificationController;
+use App\Http\Controllers\BillingDashboardController;
+use App\Http\Controllers\HospitalServiceController;
 
 
+   Route::prefix('items')->name('items.')->group(function () {
+        Route::post('/',            [HospitalServiceController::class, 'store' ])->name('store');
+        Route::put('{service}',     [HospitalServiceController::class, 'update'])->name('update');
+        Route::delete('{service}',  [HospitalServiceController::class, 'destroy'])->name('destroy');
+    });
 
 Route::prefix('patient')
      ->name('patient.')
@@ -26,7 +37,21 @@ Route::prefix('patient')
      ->group(function(){
          Route::get('dashboard', [PatientDashboardController::class, 'dashboard'])
               ->name('dashboard');
-         // … any other patient‐only pages …
+          Route::get ('account',           [ProfileController::class,'edit'])           ->name('account');
+          Route::patch('account',          [ProfileController::class,'update'])         ->name('account.update');
+          Route::patch('account/password', [ProfileController::class,'updatePassword']) ->name('account.password');
+    Route::get ('billing',          [PatientBillingController::class,'index'])->name('billing');
+Route::get ('billing/{bill}',   [PatientBillingController::class,'show'])->name('billing.show');   // “Details”
+    Route::get('billing/statement/pdf', [PatientBillingController::class,'downloadStatement'])
+         ->name('billing.statement');
+         Route::post('disputes', [PatientDisputeController::class, 'store'])
+         ->name('disputes.store');
+          Route::get('notifications', [PatientNotificationController::class,'index'])
+         ->name('notifications');
+
+
+    Route::patch('notifications/{notification}', [PatientNotificationController::class,'update'])
+         ->name('notifications.update');
      });
 
      Route::middleware('auth')
@@ -50,6 +75,9 @@ Route::prefix('patient')
 
          Route::post('{id}/complete', [SuppliesController::class,'markCompleted'])
               ->name('complete');
+                Route::post('{id}/checkout', [SuppliesController::class,'checkout'])
+         ->name('checkout');
+             
      });
 
 
@@ -68,6 +96,12 @@ Route::get('/login',   [LoginController::class, 'showLoginForm'])->name('login')
 Route::post('/login', [LoginController::class,'login'])
      ->name('login.attempt');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+Route::get('patient/login', [LoginController::class,'showPatientLoginForm'])
+     ->name('patient.login');
+// process patient login
+Route::post('patient/login', [LoginController::class,'patientLogin'])
+     ->name('patient.login.attempt');
 
 
 // Your existing panel routes (they still exist if you need them)
@@ -141,4 +175,12 @@ Route::prefix('doctor')
           Route::post('/orders/{patient}',     // POST assign order
                      [DoctorController::class,'storeOrder'])
                ->name('orders.store');
+     });
+
+     Route::middleware(['auth:web','role:billing'])
+     ->prefix('billing')
+     ->name('billing.')
+     ->group(function () {
+         Route::get('dashboard',[App\Http\Controllers\BillingDashboardController::class,'index'])
+              ->name('dashboard');
      });

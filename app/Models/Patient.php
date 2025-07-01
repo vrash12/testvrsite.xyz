@@ -39,6 +39,7 @@ class Patient extends Authenticatable
         'phone_number',
         'address',
         'password',
+        'profile_photo', 
        
     ];
 

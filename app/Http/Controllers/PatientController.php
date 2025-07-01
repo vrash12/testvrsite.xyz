@@ -28,14 +28,33 @@ class PatientController extends Controller
 {
     $this->middleware('auth');
 }
-     public function index()
-    {
-        // Fetch all patients, ordered by last name
-        $patients = Patient::orderBy('patient_last_name')->get();
+    public function index(Request $request)
+{
+    // start a query builder
+    $query = Patient::query();
 
-        return view('patients.index', compact('patients'));
+    // full-text search on MRN or name
+    if ($search = $request->input('search')) {
+        $query->where(function($q) use($search) {
+            $q->where('patient_id', 'like', "%{$search}%")
+              ->orWhere('patient_first_name', 'like', "%{$search}%")
+              ->orWhere('patient_last_name',  'like', "%{$search}%");
+        });
     }
 
+    // simple status filter
+    if ($status = $request->input('status')) {
+        $query->where('status', $status);
+    }
+
+ $patients = $query
+        ->with('admissionDetail.doctor')    // ← eager-load
+        ->orderBy('patient_last_name')
+        ->paginate(15)
+        ->withQueryString();
+
+    return view('patients.index', compact('patients'));
+}
     public function getDoctorsByDepartment($departmentId)
 {
     $doctors = Doctor::where('department_id', $departmentId)->get();
@@ -52,6 +71,8 @@ public function getRoomsByDepartment($departmentId)
                  ->get();
     return response()->json($rooms);
 }
+
+
 
 /**
  * GET /admission/rooms/{room}/beds
@@ -79,174 +100,161 @@ public function create()
 }
 
 
-    public function store(Request $request)
-    {
-        /* ---------------------- 1. VALIDATE INPUT ---------------------- */
-        $data = $request->validate([
-            /* Personal */
-            'patient_first_name' => 'required|string|max:100',
-            'patient_last_name'  => 'required|string|max:100',
-            'patient_birthday'   => 'nullable|date',
-            'civil_status'       => 'nullable|string|max:50',
-            'phone_number'       => 'nullable|string|max:20',
-            'address'            => 'nullable|string',
+public function store(Request $request)
+{
+    // 1. Validate all input
+    $data = $request->validate([
+        // Personal
+        'patient_first_name' => 'required|string|max:100',
+        'patient_last_name'  => 'required|string|max:100',
+        'patient_birthday'   => 'nullable|date',
+        'civil_status'       => 'nullable|string|max:50',
+        'phone_number'       => 'nullable|string|max:20',
+        'address'            => 'nullable|string',
 
-            /* Medical */
-            'primary_reason'     => 'nullable|string',
-            'weight'             => 'nullable|numeric',
-            'height'             => 'nullable|numeric',
-            'temperature'        => 'nullable|numeric',
-            'blood_pressure'     => 'nullable|string',
-            'heart_rate'         => 'nullable|integer',
-            'history_others'     => 'nullable|string',
-            'allergy_others'     => 'nullable|string',
+        // Medical
+        'primary_reason'     => 'nullable|string',
+        'weight'             => 'nullable|numeric',
+        'height'             => 'nullable|numeric',
+        'temperature'        => 'nullable|numeric',
+        'blood_pressure'     => 'nullable|string',
+        'heart_rate'         => 'nullable|integer',
+        'history_others'     => 'nullable|string',
+        'allergy_others'     => 'nullable|string',
 
-           /* Admission */
-            'admission_date'   => 'required|date',
-            'admission_type'   => 'required|string|max:50',
-            'admission_source' => 'nullable|string|max:100',
-            'department_id'    => 'required|exists:departments,department_id',
-            'doctor_id'        => 'required|exists:doctors,doctor_id',
-            'room_id'          => 'required|exists:rooms,room_id',
-            'bed_id'           => 'nullable|exists:beds,bed_id',
-            'admission_notes'  => 'nullable|string',
+        // Admission
+        'admission_date'   => 'required|date',
+        'admission_type'   => 'required|string|max:50',
+        'admission_source' => 'nullable|string|max:100',
+        'department_id'    => 'required|exists:departments,department_id',
+        'doctor_id'        => 'required|exists:doctors,doctor_id',
+        'room_id'          => 'required|exists:rooms,room_id',
+        'bed_id'           => 'nullable|exists:beds,bed_id',
+        'admission_notes'  => 'nullable|string',
 
-            /* Billing */
-            'insurance_provider' => 'nullable|string|max:100',
-            'policy_number'      => 'nullable|string|max:100',
-            'initial_deposit'    => 'nullable|numeric|min:0',
+        // Billing
+        'insurance_provider' => 'nullable|string|max:100',
+        'policy_number'      => 'nullable|string|max:100',
+        'initial_deposit'    => 'nullable|numeric|min:0',
+    ]);
+
+    // 2. Generate unique email & default password
+    $base = strtolower(substr($data['patient_first_name'],0,1) . substr($data['patient_last_name'],0,1));
+    $latest = Patient::where('email','like',"$base.%@patientcare.com")
+                     ->orderByDesc('email')
+                     ->first();
+    $seq = ($latest && preg_match('/\.(\d{3})@/',$latest->email,$m))
+         ? intval($m[1]) + 1
+         : 1;
+    $generatedEmail = "{$base}." . str_pad($seq,3,'0',STR_PAD_LEFT) . "@patientcare.com";
+    $plainPassword  = 'password'; // will be hashed by Patient::setPasswordAttribute
+
+    // 3. Wrap in DB transaction
+    $patient = DB::transaction(function() use ($data, $generatedEmail, $plainPassword, $request) {
+        // 3.1 Create Patient
+        $p = Patient::create([
+            'patient_first_name' => $data['patient_first_name'],
+            'patient_last_name'  => $data['patient_last_name'],
+            'patient_birthday'   => $data['patient_birthday'],
+            'civil_status'       => $data['civil_status'],
+            'email'              => $generatedEmail,
+            'phone_number'       => $data['phone_number'],
+            'address'            => $data['address'],
+            'password'           => $plainPassword,
+            'status'             => 'active',
         ]);
 
-        /* ------------------ 2. GENERATE CREDENTIALS ------------------ */
-        $base = strtolower(
-            substr($data['patient_first_name'], 0, 1) .
-            substr($data['patient_last_name'],  0, 1)
-        );
+        // 3.2 Medical Details
+        $p->medicalDetail()->create([
+            'primary_reason'  => $data['primary_reason'],
+            'weight'          => $data['weight'],
+            'height'          => $data['height'],
+            'temperature'     => $data['temperature'],
+            'blood_pressure'  => $data['blood_pressure'],
+            'heart_rate'      => $data['heart_rate'],
+            'medical_history' => json_encode([
+                'hypertension'   => (bool)$request->history_hypertension,
+                'heart_disease'  => (bool)$request->history_heart_disease,
+                'copd'           => (bool)$request->history_copd,
+                'diabetes'       => (bool)$request->history_diabetes,
+                'asthma'         => (bool)$request->history_asthma,
+                'kidney_disease' => (bool)$request->history_kidney_disease,
+                'others'         => $data['history_others'],
+            ]),
+            'allergies'       => json_encode([
+                'penicillin'   => (bool)$request->allergy_penicillin,
+                'nsaids'       => (bool)$request->allergy_nsaids,
+                'contrast_dye' => (bool)$request->allergy_contrast_dye,
+                'sulfa'        => (bool)$request->allergy_sulfa,
+                'latex'        => (bool)$request->allergy_latex,
+                'none'         => (bool)$request->allergy_none,
+                'others'       => $data['allergy_others'],
+            ]),
+        ]);
 
-        $latest = Patient::where('email', 'like', "$base.%@patientcare.com")
-                         ->orderByDesc('email')
-                         ->first();
+        // 3.3 Admission Details (capture for billing link)
+        $room = Room::findOrFail($data['room_id']);
+        $bed  = $data['bed_id'] ? Bed::findOrFail($data['bed_id']) : null;
+        $admission = $p->admissionDetail()->create([
+            'admission_date'   => $data['admission_date'],
+            'admission_type'   => $data['admission_type'],
+            'admission_source' => $data['admission_source'] ?? '',
+            'department_id'    => $data['department_id'],
+            'doctor_id'        => $data['doctor_id'],
+            'room_number'      => $room->room_number,
+            'bed_number'       => $bed ? $bed->bed_number : '',
+            'admission_notes'  => $data['admission_notes'],
+        ]);
 
-        $seq = ($latest && preg_match('/\.(\d{3})@/', $latest->email, $m))
-             ? intval($m[1]) + 1
-             : 1;
+        // 3.4 Billing Information
+        $insuranceProviderId = $data['insurance_provider']
+            ? InsuranceProvider::firstOrCreate(['name'=>$data['insurance_provider']])
+                ->insurance_provider_id
+            : null;
+        $p->billingInformation()->create([
+            'payment_method_id'     => 1,
+            'insurance_provider_id' => $insuranceProviderId,
+            'policy_number'         => $data['policy_number'],
+            'payment_status'        => 'pending',
+        ]);
 
-        $seqPadded     = str_pad($seq, 3, '0', STR_PAD_LEFT);
-        $generatedEmail = "{$base}.{$seqPadded}@patientcare.com";
-
-        $plainPassword = 'password';  // will be hashed by the model mutator
-
-        /* --------------------- 3. SAVE TRANSACTION --------------------- */
-        $patient = DB::transaction(function() use (
-            $data,
-            $generatedEmail,
-            $plainPassword,
-            $request
-        ) {
-            // 3.1 Create Patient
-            $p = Patient::create([
-                'patient_first_name' => $data['patient_first_name'],
-                'patient_last_name'  => $data['patient_last_name'],
-                'patient_birthday'   => $data['patient_birthday'],
-                'civil_status'       => $data['civil_status'],
-                'email'              => $generatedEmail,
-                'phone_number'       => $data['phone_number'],
-                'address'            => $data['address'],
-                'password'           => $plainPassword,  // mutator hashes this
-                'status'             => 'active',
+        // 3.5 Initial Deposit → link to admission_id
+        if (! empty($data['initial_deposit'])) {
+            $bill = $p->bills()->create([
+                'billing_date'   => now(),
+                'payment_status' => 'partial',
+                'admission_id'   => $admission->admission_id,
             ]);
-
-            // 3.2 Medical Details
-            $p->medicalDetail()->create([
-                'primary_reason'  => $data['primary_reason'],
-                'weight'          => $data['weight'],
-                'height'          => $data['height'],
-                'temperature'     => $data['temperature'],
-                'blood_pressure'  => $data['blood_pressure'],
-                'heart_rate'      => $data['heart_rate'],
-                'medical_history' => json_encode([
-                    'hypertension'   => (bool)$request->history_hypertension,
-                    'heart_disease'  => (bool)$request->history_heart_disease,
-                    'copd'           => (bool)$request->history_copd,
-                    'diabetes'       => (bool)$request->history_diabetes,
-                    'asthma'         => (bool)$request->history_asthma,
-                    'kidney_disease' => (bool)$request->history_kidney_disease,
-                    'others'         => $data['history_others'],
-                ]),
-                'allergies'       => json_encode([
-                    'penicillin'   => (bool)$request->allergy_penicillin,
-                    'nsaids'       => (bool)$request->allergy_nsaids,
-                    'contrast_dye' => (bool)$request->allergy_contrast_dye,
-                    'sulfa'        => (bool)$request->allergy_sulfa,
-                    'latex'        => (bool)$request->allergy_latex,
-                    'none'         => (bool)$request->allergy_none,
-                    'others'       => $data['allergy_others'],
-                ]),
+            $bill->items()->create([
+                'amount'          => $data['initial_deposit'],
+                'billing_date'    => now(),
+                'discount_amount' => 0,
             ]);
+        }
 
-            // 3.3 Admission Details
-            $room = Room::findOrFail($data['room_id']);
-            $bed  = $data['bed_id']
-                  ? Bed::findOrFail($data['bed_id'])
-                  : null;
+        // 3.6 Create User account for patient
+        $p->user()->create([
+            'username'      => Str::before($generatedEmail,'@'),
+            'email'         => $generatedEmail,
+            'password'      => $plainPassword,
+            'role'          => 'patient',
+            'department_id' => $data['department_id'],
+            'room_id'       => $data['room_id'],
+            'bed_id'        => $data['bed_id'] ?? null,
+        ]);
 
-            $p->admissionDetail()->create([
-                'admission_date'   => $data['admission_date'],
-                'admission_type'   => $data['admission_type'],
-                'admission_source' => $data['admission_source'] ?? '',
-                'department_id'    => $data['department_id'],
-                'doctor_id'        => $data['doctor_id'],
-                'room_number'      => $room->room_number,
-                'bed_number'       => $bed ? $bed->bed_number : '',
-                'admission_notes'  => $data['admission_notes'],
-            ]);
+        return $p;
+    });
 
-            // 3.4 Billing Information & Initial Deposit
-            $p->billingInformation()->create([
-                'payment_method_id'     => 1,
-                'insurance_provider_id' => $data['insurance_provider']
-                    ? InsuranceProvider::firstOrCreate(['name' => $data['insurance_provider']])
-                        ->insurance_provider_id
-                    : null,
-                'policy_number'   => $data['policy_number'],
-                'payment_status'  => 'pending',
-            ]);
-
-            if (! empty($data['initial_deposit'])) {
-                $bill = $p->bills()->create([
-                    'billing_date'   => now(),
-                    'payment_status' => 'partial',
-                ]);
-                $bill->items()->create([
-                    'amount'          => $data['initial_deposit'],
-                    'billing_date'    => now(),
-                    'discount_amount' => 0,
-                ]);
-            }
-
-            // 3.5 Create matching User record
-            $p->user()->create([
-                'username'      => Str::before($generatedEmail, '@'),
-                'email'         => $generatedEmail,
-                'password'      => $plainPassword,    // User mutator hashes this
-                'role'          => 'patient',
-                'department_id' => $data['department_id'],
-                'room_id'       => $data['room_id'],
-                'bed_id'        => $data['bed_id'] ?? null,
-            ]);
-
-            return $p;
-        });
-
-        return redirect()
-            ->route('patients.show', $patient)
-            ->with([
-                'generatedEmail' => $generatedEmail,
-                'plainPassword'  => $plainPassword,
-                'success'        => 'Patient created successfully.',
-            ]);
-    }
-
+    // 4. Redirect to Patient show with credentials
+    return redirect()
+        ->route('patients.show', $patient)
+        ->with([
+            'generatedEmail' => $generatedEmail,
+            'plainPassword'  => $plainPassword,
+            'success'        => 'Patient admitted successfully.',
+        ]);
+}
 
     public function show(Patient $patient)
 {

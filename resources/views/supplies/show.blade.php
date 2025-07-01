@@ -20,7 +20,8 @@
                         <i class="fa-solid fa-hashtag me-2"></i><strong>TRANSACTION NO</strong>
                     </div>
                     <div class="card-body">
-                        {{ $charge->id }} — {{ $charge->date->format('M d, Y') }}
+                       {{ $charge->created_at->format('M d, Y') }}
+
                     </div>
                 </div>
             </div>
@@ -35,60 +36,59 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="fa-solid fa-user-doctor me-2"></i><strong>DOCTOR ASSIGNED</strong>
-                    </div>
-                    <div class="card-body">
-                        {{ $charge->prescribing_doctor }}
-                    </div>
-                </div>
-            </div>
+      <div class="col-md-4">
+  <div class="card">
+    <div class="card-header">
+      <i class="fa-solid fa-user-doctor me-2"></i><strong>DOCTOR ASSIGNED</strong>
+    </div>
+    <div class="card-body">
+      {{ optional(optional($charge->patient->admissionDetail)->doctor)->doctor_name ?? '—' }}
+    </div>
+  </div>
+</div>
+
         </div>
 
-        {{-- List of Charges --}}
-        <div class="card mb-4">
-            <div class="card-header">
-                 <i class="fa-solid fa-receipt me-2"></i><strong>LIST OF CHARGES</strong>
-            </div>
-            <div class="card-body p-0">
-                <form method="POST" action="{{ route('') }}" id="form">
-                    @csrf
-                    <table class="table mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>#</th>
-                                <th>ITEM NAME</th>
-                                <th>QUANTITY</th>
-                                <th>UNIT PRICE</th>
-                                <th>SUBTOTAL</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($charge->items as $i => $item)
-                                <tr>
-                                    <td>{{ $i+1 }}</td>
-                                    <td>{{ $item->name }}</td>
-                                    <td>{{ $item->quantity}}</td>
-                                    <td>₱{{ number_format($item->unit_price,2) }}</td>
-                                    <td>₱{{ number_format($item->quantity * $item->unit_price,2)}}</td> 
-                                </tr>
-                            @endforeach
-                                <tr>
-                                    <td colspan="5" class="text-center fw-bold text-muted">** Nothing Follows **</td>
-                                </tr>
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <th colspan="4" class="text-end">Total</th>
-                                <th>₱{{ number_format($charge->total_amount,2) }}</th>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </form>
-            </div>
-        </div>
+    {{-- List of Charges --}}
+<div class="card mb-4">
+  <div class="card-header">
+    <i class="fa-solid fa-receipt me-2"></i><strong>LIST OF CHARGES</strong>
+  </div>
+  <div class="card-body p-0">
+    <form method="POST" action="{{ route('supplies.checkout', $charge->id) }}" id="form">
+      @csrf
+      <table class="table mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>ITEM NAME</th>
+            <th>QUANTITY</th>
+            <th>UNIT PRICE</th>
+            <th>SUBTOTAL</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>{{ $charge->service->service_name }}</td>
+            <td>{{ $charge->quantity }}</td>
+            <td>₱{{ number_format($charge->unit_price,2) }}</td>
+            <td>₱{{ number_format($charge->total,2) }}</td>
+          </tr>
+          <tr>
+            <td colspan="5" class="text-center fw-bold text-muted">** Nothing Follows **</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <th colspan="4" class="text-end">Total</th>
+            <th>₱{{ number_format($charge->total,2) }}</th>
+          </tr>
+        </tfoot>
+      </table>
+    </form>
+  </div>
+</div>
 
         {{-- Notes --}}
         @if($charge->notes)
@@ -101,12 +101,10 @@
         @endif
 
         {{-- Navigation --}}
-        <div class="text-end">
-            <a href="{{ route('') }}" class="btn btn-outline-secondary me-2">Back</a>    
-            <a href="{{ route('') }}"  class="btn btn-primary checkout-btn">
-                <i class="fa-solid fa-circle-check me-2"></i>Checkout
-            </a>
-        </div>
+ <a href="{{ route('supplies.queue') }}" class="btn btn-outline-secondary me-2">Back</a>    
+    <button class="btn btn-primary checkout-btn">
+        <i class="fa-solid fa-circle-check me-2"></i>Checkout
+    </button>
 
     </div>
 

@@ -3,164 +3,113 @@
 @extends('layouts.supplies')
 
 @section('content')
+<div class="container-fluid h-100 border p-4 d-flex flex-column" style="background-color: #fafafa;">
 
-     <div class="container-fluid h-100 border p-4 d-flex flex-column" style="background-color: #fafafa;">
+  {{-- Heading --}}
+  <div class="mb-3">
+    <h1 class="hdng">Patient Supply Requests Queue</h1>
+    <p>Confirm request completion</p>
+  </div>
 
-            {{-- Heading --}}
-            <div>
-                <h1 class="hdng">Patient - Supply Requests Queue</h1>
-                <p>Confirm requests completion and all</p>
-            </div>
-
-            {{-- Search Bar | Filter --}}
-            <form  method='GET' action="">
-            <div class="row border py-4 mx-1">
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-outline-primary w-100"><i class="fa-solid fa-filter me-3"></i>Filter Results</button>
-                </div>
-
-                <div class="col-md-2">
-                    <select class="form-select" name="status">
-                        <option value="">All</option>
-                        <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
-                    </select>
-                </div>
-
-                <div class="col-md-2">
-                    <select class="form-select" name="date_range">
-                        <option value="">Default</option>
-                        <option value="asc" {{ request('date_range') == 'asc' ? 'selected' : ''}}>Ascending</option>
-                        <option value="desc" {{ request('date_range') == 'desc' ? 'selected' : ''}}>Descending</option>
-                    </select>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="input-group w-100">
-                        <input type="text" class="form-control" placeholder="Search by Name or MRN" name="search" value="{{ request('search') }}">
-                        <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    </div>
-                </div>
-            </div>
-            </form>
-
-            {{-- Table --}}
-            <div class="row border my-2 mx-1">
-               <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Entry Date</th>
-                                <th>MRN</th>
-                                <th>Patient Name</th>
-                                <th>Item Name</th>
-                                <th>Quantity</th>
-                                <th>Assigned By (Doctor)</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($recentMiscRequest as $miscReq)
-                                <tr>
-                                    <td>{{$miscReq->entry_date->format('Y-m-d')}}</td>
-                                    <td>{{$miscReq->patient->patientID}}</td>
-                                    <td>{{$miscReq->patient->patient_first_name}} {{$miscReq->patient->patient_last_name}}</td>
-                                    <td>{{$miscReq->item_name}}</td>
-                                    <td>{{$miscReq->quantity}}</td>
-                                    <td>{{$miscReq->doctor->doctor_name}}</td>
-                                    <td><span class="badge bg-{{  $miscReq->status == 'pending' ? 'warning text-dark' : 'success' }}">
-                                       {{ ucfirst($miscReq->status) }}
-                                    </span></td>
-                                    <td><a href="{{ route('') }}" class="btn btn-sm btn-outline-success">
-                                        <i class="fa-solid fa-check"></i> Confirm
-                                    </a></td>
-                                </tr>
-                            @empty 
-                            <tr>
-                                <td colspan="8" class="text-center text-muted py-3">No recent admissions.</td>
-                            </tr>   
-                            @endforelse
-                        </tbody>
-                        <tbody id="completed-row">
-                            {{-- Completed Requests Below --}}
-                        </tbody>
-                    </table>
-               </div>
-            </div>
+  {{-- Filter Form --}}
+  <form method="GET" action="{{ route('supplies.queue') }}">
+    <div class="row mb-3 g-2">
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-outline-primary w-100">
+          <i class="fa-solid fa-filter me-2"></i>Filter
+        </button>
+      </div>
+      <div class="col-md-2">
+        <select name="status" class="form-select">
+          <option value="">All Statuses</option>
+          <option value="pending"   {{ request('status')=='pending'   ? 'selected' : '' }}>Pending</option>
+          <option value="completed" {{ request('status')=='completed' ? 'selected' : '' }}>Completed</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select name="date_range" class="form-select">
+          <option value="">Default</option>
+          <option value="asc"  {{ request('date_range')=='asc'  ? 'selected' : '' }}>Oldest first</option>
+          <option value="desc" {{ request('date_range')=='desc' ? 'selected' : '' }}>Newest first</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <div class="input-group">
+          <input type="text"
+                 name="search"
+                 class="form-control"
+                 placeholder="Search by Name or MRN"
+                 value="{{ request('search') }}">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+        </div>
+      </div>
     </div>
+  </form>
 
-@push('scripts')
-    <script>
-        // Confirm Approvals Dialog Box, Change Status
-        const cfBtn = document.querySelectorAll('.confirm-btn');
-
-        cfBtn.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const row = btn.closest('tr'); 
-
-                Swal.fire({
-                    title: "Are you sure?",
-                    text: "You wont be able to revert this!",
-                    icon: "warning",
-                    showCancelButton: true,
-                    confirmButtonColor:"#00529A",
-                    cancelButtonColor: "#d33",
-                    confirmButtonText: "Confirm"
-                }).then((result)=>{
-                    if(result.isConfirmed){
-                        // Update Status Badge: Pending -> Completed
-                        const statusBadge = row.querySelector('.badge');
-                        statusBadge.classList.remove('bg-warning', 'text-dark');
-                        statusBadge.classList.add('bg-success', 'text-white');
-                        statusBadge.textContent = 'Completed';
-
-                         // Remove Confirm Button
-                        btn.remove();
-
-                        // Move completed Rows Below
-                        const completedBody = document.getElementById('completed-row');
-                        completedBody.appendChild(row);
-
-                        // Success Alert
-                        Swal.fire({
-                            title: "Confirmed",
-                            text: "Request marked as completed.",
-                            icon: "success"                       
-                        })
-                    }
-                })
-            });
-        });
-
-    </script>
-@endpush
+  {{-- Table --}}
+  <div class="table-responsive flex-grow-1" style="max-height: 500px; overflow-y: auto;">
+    <table class="table table-hover table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Entry Date</th>
+          <th>MRN</th>
+          <th>Patient Name</th>
+          <th>Item Name</th>
+          <th>Quantity</th>
+          <th>Assigned By</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+       @forelse($miscReq as $misc)
+<tr>
+  <td>{{ $misc->created_at->format('Y-m-d') }}</td>
+  <td>{{ $misc->patient->patient_id }}</td>
+  <td>{{ $misc->patient->patient_first_name }} {{ $misc->patient->patient_last_name }}</td>
+  <td>{{ $misc->service->service_name }}</td>
+  <td>{{ $misc->quantity }}</td>
+  <td>
+    {{ optional(optional($misc->patient->admissionDetail)->doctor)->doctor_name ?? '—' }}
+  </td>
+  <td>
+    <span class="badge bg-{{ $misc->status==='pending'? 'warning text-dark':'success' }}">
+      {{ ucfirst($misc->status) }}
+    </span>
+  </td>
+  <td class="d-flex gap-1">
+    <a href="{{ route('supplies.show', $misc->id) }}" class="btn btn-sm btn-outline-info">
+      <i class="fa-solid fa-eye me-1"></i>View
+    </a>
+    @if($misc->status === 'pending')
+      <form action="{{ route('supplies.complete', $misc->id) }}" method="POST" class="m-0">
+        @csrf
+        <button class="btn btn-sm btn-outline-success">
+          <i class="fa-solid fa-check me-1"></i>Confirm
+        </button>
+      </form>
+    @else
+      <span class="btn btn-sm btn-outline-secondary disabled">
+        <i class="fa-solid fa-check-double me-1"></i>Done
+      </span>
+    @endif
+  </td>
+</tr>
+        @empty
+          <tr>
+            <td colspan="8" class="text-center text-muted py-3">
+              No supply requests found.
+            </td>
+          </tr>
+        @endforelse
+      </tbody>
+    </table>
+  </div>
+</div>
 @endsection
 
-
-{{-- 
-
-Needs Improvement for
-- Confirm Dialog Box
-- Pending - Completed Status 
-- Filter Does not work
-
-@if(session('success'))
-  <div class="alert alert-success alert-dismissible fade show mt-2" role="alert">
-    {{ session('success') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-@endif
-
-
-@if($miscReq->status == 'pending')
-  <a href="{{ route('supplies.markCompleted', $miscReq->id) }}" class="btn btn-sm btn-outline-success">
-    <i class="fa-solid fa-check"></i> Confirm
-  </a>
-@else
-  <span class="text-muted"><i class="fa-solid fa-check-double"></i> Completed</span>
-@endif
-
-
-
---}}
+@push('scripts')
+<script>
+  // (your existing SweetAlert or other JS can remain here)
+</script>
+@endpush

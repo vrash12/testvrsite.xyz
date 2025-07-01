@@ -1,7 +1,6 @@
 <?php
-namespace App\Http\Controllers\Auth;
-
-use App\Http\Controllers\Controller;
+// app/Http/Controllers/LoginController.php
+namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -36,20 +35,22 @@ class LoginController extends Controller
             ->withInput($request->only('email', 'remember'));
     }
 
-      private function redirectByRole(string $role)
-    {
-        return match ($role) {
-            'admin'         => redirect()->route('admin.dashboard'),
-            'admission'     => redirect()->route('admission.dashboard'),
-            'pharmacy'      => redirect()->route('pharmacy.dashboard'),
-            'doctor'        => redirect()->route('doctor.dashboard'),
-            'patient'       => redirect()->route('patient.dashboard'),
-            'imaging'       => redirect()->route('imaging.dashboard'),
-            'supplies'      => redirect()->route('supplies.dashboard'),
-            'operating_room'=> redirect()->route('operating-room.dashboard'),
-            default         => redirect()->route('home'),
-        };
-    }
+    private function redirectByRole(string $role)
+{
+    return match (strtolower(trim($role))) {
+        'admin'         => redirect()->route('admin.dashboard'),
+        'admission'     => redirect()->route('admission.dashboard'),
+        'pharmacy'      => redirect()->route('pharmacy.dashboard'),
+        'doctor'        => redirect()->route('doctor.dashboard'),
+        'patient'       => redirect()->route('patient.dashboard'),
+        'imaging'       => redirect()->route('imaging.dashboard'),
+        'supplies'      => redirect()->route('supplies.dashboard'),
+        'operating_room'=> redirect()->route('operating-room.dashboard'),
+        'billing'       => redirect()->route('billing.dashboard'),
+        default         => redirect()->route('home'),
+    };
+}
+
 
 
     public function logout(Request $request)

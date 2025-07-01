@@ -7,6 +7,8 @@ use App\Models\MiscellaneousCharge;
 use App\Models\Patient;
 use Illuminate\Support\Facades\DB; 
 use App\Models\HospitalService;
+use App\Models\Department;
+
 
 class SuppliesController extends Controller
 {
@@ -29,7 +31,8 @@ class SuppliesController extends Controller
 
         // 3) Pending orders count
         $pendingOrders = MiscellaneousCharge::where('status', 'pending')->count();
-
+  $services    = HospitalService::with('department')->orderBy('service_name')->get();
+    $departments = Department::orderBy('department_name')->get();
         // 4) 5 most recent
         $recentSupplies = MiscellaneousCharge::with(['patient','service','creator'])
             ->latest('created_at')
@@ -49,7 +52,9 @@ class SuppliesController extends Controller
             'patientsServe',
             'pendingOrders',
             'recentSupplies',
-            'mostServedSupply'
+            'mostServedSupply',
+            'services',
+            'departments'
         ));
     }
 
@@ -69,58 +74,79 @@ class SuppliesController extends Controller
      * POST /supplies
      * Validate & store a new supply charge
      */
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'patient_id' => 'required|exists:patients,patient_id',
-            'service_id' => 'required|exists:hospital_services,service_id',
-            'quantity'   => 'required|integer|min:1',
-        ]);
+ public function store(Request $request)
+{
+    $data = $request->validate([
+        'patient_id'             => 'required|exists:patients,patient_id',
+        'notes'                  => 'nullable|string',
+        'misc_item'              => 'required|array|min:1',
+        'misc_item.*.service_id' => 'required|exists:hospital_services,service_id',
+        'misc_item.*.quantity'   => 'required|integer|min:1',
+    ]);
 
-        $service   = HospitalService::findOrFail($data['service_id']);
+    foreach ($data['misc_item'] as $item) {
+        $service   = HospitalService::findOrFail($item['service_id']);
         $unitPrice = $service->price;
-        $total     = $unitPrice * $data['quantity'];
+        $total     = $unitPrice * $item['quantity'];
 
-        $charge = MiscellaneousCharge::create([
+        MiscellaneousCharge::create([
             'patient_id'   => $data['patient_id'],
-            'service_id'   => $data['service_id'],
-            'quantity'     => $data['quantity'],
+            'service_id'   => $item['service_id'],
+            'quantity'     => $item['quantity'],
             'unit_price'   => $unitPrice,
             'total'        => $total,
             'status'       => 'pending',
+            'notes'        => $data['notes'] ?? null,
             'created_by'   => Auth::id(),
         ]);
-
-        return redirect()
-            ->route('supplies.show', $charge->id)
-            ->with('success','Supply charge created.');
     }
 
-    /**
-     * GET /supplies/queue
-     * Show all supply requests, pending and completed
-     */
+    return redirect()
+        ->route('supplies.queue')
+        ->with('success','Supply charge(s) created.');
+}
+
     public function queue()
     {
-        $miscReq = MiscellaneousCharge::with(['patient','service','creator','completer'])
+        $miscReq = MiscellaneousCharge::with([
+                'patient.admissionDetail.doctor',  // ← load admission → doctor
+                'service',
+                'creator',
+                'completer',
+            ])
             ->orderByDesc('created_at')
             ->get();
 
         return view('supplies.queue', compact('miscReq'));
     }
 
-    /**
-     * GET /supplies/{id}
-     * Show details for a single supply request
-     */
-    public function show($id)
+
+       public function show($id)
     {
-        $charge = MiscellaneousCharge::with(['patient','service','creator','completer'])
+        $charge = MiscellaneousCharge::with([
+                'patient.admissionDetail.doctor',  // ← same here
+                'service',
+                'creator',
+                'completer',
+            ])
             ->findOrFail($id);
 
         return view('supplies.show', compact('charge'));
     }
+public function checkout($id)
+{
+    $charge = MiscellaneousCharge::findOrFail($id);
 
+    // mark as completed
+    $charge->update([
+        'status'       => 'completed',
+        'completed_by' => Auth::id(),
+    ]);
+
+    return redirect()
+        ->route('supplies.queue')
+        ->with('success', 'Supply charge has been checked out.');
+}
     /**
      * POST /supplies/{id}/complete
      * Mark a pending request as completed
