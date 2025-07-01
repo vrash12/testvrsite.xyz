@@ -12,14 +12,16 @@
       {{-- Font Awesome --}}
       <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
       {{-- CSS --}}
+
         <style>
-            .sidebar{width:240px; display:flex; flex-direction:column; background-color:#00529A ;}
+            body { overflow-x: hidden; }
+            .sidebar { width: 240px; position: fixed; top: 0; bottom: 0; left: 0; z-index: 1; display: flex; flex-direction: column; background-color: #00529A; }
             .logo{ width:80px } 
             .avatar { width:90px; height: 90px; background-color: aliceblue; }
             .nav-link {transition: background-color 0.2s ease; border-radius: 0.375rem;}
             .nav-link:hover { background-color: rgba(255, 255, 255, 0.2); color: #fff !important; }
             nav .icon{ width: 30px;}
-            .hdng{font-size: 1.5em;}
+            .hdng{font-size: 1.5em; color:#00529A; font-weight: bold;}
         </style>
 
   </head>
@@ -28,7 +30,7 @@
     <div class="d-flex">
 
       {{-- Sidebar --}}
-      <aside class="sidebar bg-primary text-white p-3 vh-100 flex-shrink-0">
+      <aside class="sidebar text-white p-3 vh-100 flex-shrink-0">
 
         {{-- Top --}}
         <div class="text-center mb-6">
@@ -90,7 +92,7 @@
       </aside>
 
       {{-- Main Content --}}
-      <main class="flex-grow-1 p-4">
+      <main class="p-4" style="margin-left: 240px;">
           @yield('content')
       </main>
 
