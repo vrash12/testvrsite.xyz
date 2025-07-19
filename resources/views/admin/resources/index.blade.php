@@ -1,3 +1,4 @@
+{{--resources/views/admin/resources/index.blade.php--}}
 @extends('layouts.admin')
 
 @section('content')

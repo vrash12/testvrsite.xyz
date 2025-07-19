@@ -1,5 +1,6 @@
 <?php
 // app/Http/Controllers/Pharmacy/ChargeController.php
+namespace App\Http\Controllers\Pharmacy;
 use App\Http\Controllers\Controller;
 use App\Models\PharmacyCharge;
 use App\Models\PharmacyChargeItem;
@@ -7,6 +8,7 @@ use App\Models\Patient;
 use App\Models\HospitalService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use App\Models\Doctor; 
 
 class ChargeController extends Controller
 {
@@ -22,15 +24,23 @@ class ChargeController extends Controller
         return view('pharmacy.charges.index', compact('charges'));
     }
 
-    /**
-     * Show form to create a new charge.
-     */
-    public function create()
+ public function create()
     {
-        $patients = Patient::all();
-        $services = HospitalService::all();
+        // only medication‐type services
+        $services = HospitalService::where('service_type', 'medication')
+                       ->orderBy('service_name')
+                       ->get();
 
-        return view('pharmacy.create', compact('patients','services'));
+        // all patients
+        $patients = Patient::orderBy('patient_last_name')
+                       ->get();
+
+        // all doctors
+        $doctors = Doctor::orderBy('doctor_name')
+                   ->get();
+
+        // pass all three to the view
+        return view('pharmacy.charges.create', compact('services','patients','doctors'));
     }
 
     /**
@@ -77,7 +87,7 @@ class ChargeController extends Controller
         $charge->update(['total_amount' => $total]);
 
         return redirect()
-            ->route('pharmacy.charges.show', $charge)
+            ->route('pharmacy.show', $charge)
             ->with('success','Medication charge created.');
     }
 
@@ -87,7 +97,7 @@ class ChargeController extends Controller
     public function show(PharmacyCharge $charge)
     {
         $charge->load('patient','items.service'); // service if you defined relationship
-        return view('pharmacy.charges.show', compact('charge'));
+        return view('pharmacy.show', compact('charge'));
     }
 
     /**
@@ -146,7 +156,7 @@ class ChargeController extends Controller
         $charge->update(['total_amount' => $total]);
 
         return redirect()
-            ->route('pharmacy.charges.show', $charge)
+            ->route('pharmacy.show', $charge)
             ->with('success','Charge updated.');
     }
 

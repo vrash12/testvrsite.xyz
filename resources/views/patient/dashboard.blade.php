@@ -2,137 +2,192 @@
 @extends('layouts.patients')
 
 @section('content')
-<div class="container-fluid">
-  {{-- Greeting --}}
-  <div class="mb-5">
-    <h1>Hello, <span class="text-primary">{{ $user->username }}</span>!</h1>
-    <p class="text-muted">
-      Welcome to your patient portal! A hub for patients to access medical records and bills anytime, anywhere.
-    </p>
+<div class="container-fluid py-4">
+    <h1 class="h4 mb-3">Hello, {{ $user->username }}!</h1>
+    <p>Welcome to your patient portal! A hub for patients to access medical records and bills anytime, anywhere.</p>
+
+    <div class="row">
+        {{-- Patient ID --}}
+        <div class="col-md-3 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Patient ID</h5>
+                    <p class="card-text">{{ str_pad($user->patient_id, 8, '0', STR_PAD_LEFT) }}</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Room Number --}}
+        <div class="col-md-3 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Room Number</h5>
+                    <p class="card-text">{{ $admission->room_number ?? 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Latest Admit Date --}}
+        <div class="col-md-3 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Latest Admit Date</h5>
+                    <p class="card-text">
+                        {{ $admission && $admission->admission_date
+                            ? $admission->admission_date->format('m/d/Y')
+                            : 'N/A' }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Amount Due --}}
+        <div class="col-md-3 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Amount Due</h5>
+                   <div class="fs-5 fw-bold">
+      ₱{{ number_format($amountDue, 2) }}
+    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {{-- Prescriptions to Take --}}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Prescriptions to Take</h5>
+                    @forelse($prescriptions as $item)
+                        <div class="mb-2">
+                            <strong>{{ $item->service->service_name }}</strong>
+                            — {{ $item->dosage ?? 'Qty: '.$item->quantity_asked }}
+                            <br>
+                            <small class="text-muted">
+                                Ordered on
+                                {{ \Carbon\Carbon::parse($item->datetime)->format('m/d/Y h:i A') }}
+                            </small>
+                        </div>
+                    @empty
+                        <p>No prescriptions</p>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
+        {{-- Today's Schedule --}}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Your Schedule Today</h5>
+                    @forelse($todaySchedule as $sched)
+                        <div class="mb-2">
+                            <strong>{{ $sched->service->service_name }}</strong>
+                            at {{ \Carbon\Carbon::parse($sched->datetime)->format('h:i A') }}
+                            <br>
+                            <small class="text-muted">{{ ucfirst($sched->service_status) }}</small>
+                        </div>
+                    @empty
+                        <p>No appointments</p>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {{-- Assigned Doctors --}}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Assigned Doctors</h5>
+                    @forelse($assignedDoctors as $doc)
+                        <p>
+                            {{ $doc->doctor_name }}
+                            ({{ $doc->doctor_specialization }})
+                        </p>
+                    @empty
+                        <p>No doctors assigned</p>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
+        {{-- Pharmacy Charges --}}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Pharmacy Charges</h5>
+                    @forelse($pharmacyCharges as $c)
+                        <div class="mb-2">
+                            <strong>{{ $c->service->service_name }}</strong>
+                            — ₱{{ number_format($c->quantity_asked * $c->service->price, 2) }}
+                            <br>
+                            <small class="text-muted">
+                                Ordered on
+                                {{ \Carbon\Carbon::parse($c->datetime)->format('m/d/Y h:i A') }}
+                            </small>
+                        </div>
+                    @empty
+                        <p>No charges</p>
+                    @endforelse
+
+                    <hr/>
+                    <p class="mb-0">
+                        <strong>Total Pharmacy Charges:</strong>
+                        ₱{{ number_format($pharmacyTotal, 2) }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {{-- Scheduled / Completed Services --}}
+<div class="card mb-3 shadow-sm">
+  <div class="card-header bg-light fw-semibold">
+    Hospital Services <span class="badge bg-primary">{{ $serviceAssignments->count() }}</span>
   </div>
 
-  {{-- Top Metrics --}}
-  <div class="row g-4 mb-5">
-    {{-- Patient ID --}}
-    <div class="col-md-4">
-      <div class="card shadow-sm">
-        <div class="card-body d-flex align-items-center">
-          <i class="fas fa-user fa-2x text-secondary me-3"></i>
-          <div>
-            <div class="text-muted">PATIENT ID</div>
-            <strong>{{ str_pad($user->patient_id, 8, '0', STR_PAD_LEFT) }}</strong>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {{-- Room Number --}}
-    <div class="col-md-4">
-      <div class="card shadow-sm">
-        <div class="card-body d-flex align-items-center">
-          <i class="fas fa-door-closed fa-2x text-secondary me-3"></i>
-          <div>
-            <div class="text-muted">ROOM NUMBER</div>
-            <strong>{{ $admission->room_number ?? '—' }}</strong>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {{-- Latest Admit Date --}}
-    <div class="col-md-4">
-      <div class="card shadow-sm">
-        <div class="card-body d-flex align-items-center">
-          <i class="fas fa-ticket-alt fa-2x text-secondary me-3"></i>
-          <div>
-            <div class="text-muted">LATEST ADMIT DATE</div>
-            <strong>
-              {{ optional($admission)->admission_date?->format('m/d/y') ?? '—' }}
-            </strong>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="card-body p-0">
+    @if($serviceAssignments->isEmpty())
+        <p class="text-muted p-3 mb-0">No services ordered yet.</p>
+    @else
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Datetime</th>
+            <th>Service</th>
+            <th>Dept.</th>
+            <th class="text-end">Price</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach($serviceAssignments as $sa)
+            <tr>
+              <td>{{ \Carbon\Carbon::parse($sa->datetime)->format('M d, Y') }}</td>
+              <td>{{ $sa->service->service_name }}</td>
+              <td>{{ $sa->service->department->department_name ?? '—' }}</td>
+              <td class="text-end">{{ number_format($sa->service->price, 2) }}</td>
+              <td><span class="badge bg-{{ $sa->service_status === 'confirmed' ? 'success' : 'secondary' }}">
+                    {{ ucfirst($sa->service_status) }}
+                  </span>
+              </td>
+            </tr>
+          @endforeach
+        </tbody>
+        <tfoot>
+          <tr class="fw-semibold">
+            <td colspan="3" class="text-end">Total</td>
+            <td class="text-end">{{ number_format($servicesTotal, 2) }}</td>
+            <td></ td>
+          </tr>
+        </tfoot>
+      </table>
+    @endif
   </div>
+</div>
 
-  {{-- Amount Due --}}
-  <div class="row g-4 mb-5">
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-body d-flex align-items-center">
-          <i class="fas fa-peso-sign fa-2x text-secondary me-3"></i>
-          <div>
-            <div class="text-muted">AMOUNT DUE</div>
-            <strong>₱{{ number_format($amountDue, 2) }}</strong>
-          </div>
-        </div>
-      </div>
     </div>
-    {{-- placeholders --}}
-    <div class="col-md-3"><div class="card shadow-sm" style="height:100%"></div></div>
-    <div class="col-md-3"><div class="card shadow-sm" style="height:100%"></div></div>
-  </div>
-
-  {{-- Detail Cards --}}
-  <div class="row g-4">
-    {{-- Prescriptions to Take --}}
-    <div class="col-md-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-header">PRESCRIPTIONS TO TAKE</div>
-        <ul class="list-group list-group-flush">
-          @forelse($prescriptions as $p)
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-              {{ $p->service->service_name }}
-              <span class="text-success">— pending dispensing</span>
-            </li>
-          @empty
-            <li class="list-group-item text-center text-muted">No prescriptions</li>
-          @endforelse
-        </ul>
-      </div>
-    </div>
-
-    {{-- Your Schedule Today --}}
-    <div class="col-md-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-header">YOUR SCHEDULE TODAY</div>
-        <ul class="list-group list-group-flush">
-          @forelse($todaySchedule as $s)
-            <li class="list-group-item d-flex justify-content-between">
-              <div>
-                <small class="text-muted">
-                  {{ $s->service->department->department_name }}
-                </small><br>
-                <strong>{{ $s->service->service_name }}</strong><br>
-                <small>
-                  {{ \Carbon\Carbon::parse($s->datetime)->format('h:ia') }}
-                </small>
-              </div>
-              <i class="fas fa-procedures fa-2x text-secondary"></i>
-            </li>
-          @empty
-            <li class="list-group-item text-center text-muted">No appointments</li>
-          @endforelse
-        </ul>
-      </div>
-    </div>
-
-    {{-- Assigned Doctors --}}
-    <div class="col-md-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-header">ASSIGNED DOCTORS</div>
-        <ul class="list-group list-group-flush">
-          @forelse($assignedDoctors as $doc)
-            <li class="list-group-item">
-              <strong>{{ $doc->doctor_name }}</strong><br>
-              <small class="text-muted">{{ $doc->doctor_specialization }}</small>
-            </li>
-          @empty
-            <li class="list-group-item text-center text-muted">No doctors assigned</li>
-          @endforelse
-        </ul>
-      </div>
-    </div>
-  </div>
 </div>
 @endsection

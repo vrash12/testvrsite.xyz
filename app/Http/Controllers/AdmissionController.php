@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
 use App\Models\Room;
 use App\Models\Admission;
 use App\Models\User;
-
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -226,20 +226,16 @@ class AdmissionController extends Controller
    
 public function dashboard()
 {
-    // 1) Total patients ever admitted
-    $totalPatients = Patient::count();
+    $totalPatients   = Patient::count();
+    $today           = Carbon::today();                  
+    $newAdmissions   = AdmissionDetail::whereDate('created_at', $today)
+                                      ->count();
+    $availableBeds   = Bed::where('status', 'available')->count();
 
-    // 2) New admissions today (or in the last 7 days, whatever “new” means)
-    $newAdmissions = AdmissionDetail::whereDate('admission_date', today())->count();
-
-    // 3) Available beds (you already have this)
-    $availableBeds = Bed::where('status','available')->count();
-
-    // 4) Recent admissions for the table (with patient, room, doctor, diagnosis)
-    $recentAdmissions = AdmissionDetail::with(['patient','doctor'])
-                        ->latest()
-                        ->take(5)
-                        ->get();
+    $recentAdmissions = AdmissionDetail::with(['patient.medicalDetail','doctor'])
+                            ->latest()
+                            ->take(5)
+                            ->get();
 
     return view('admission.dashboard', compact(
         'totalPatients',

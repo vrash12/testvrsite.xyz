@@ -1,5 +1,5 @@
 <?php
-
+// app/Models/Patient.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +11,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Hash;  
+use App\Models\Prescription;
+use App\Models\BillingInformation; 
 
 
 class Patient extends Authenticatable
@@ -36,6 +38,7 @@ class Patient extends Authenticatable
         'patient_birthday',
         'civil_status',
         'email',
+        'sex',     
         'phone_number',
         'address',
         'password',
@@ -73,25 +76,48 @@ public function setPasswordAttribute($plain)
         return $this->hasOne(BillingInformation::class, 'patient_id');
     }
 
-    public function dashboard()
-    {
-        // Get the authenticated patient
-        $patient = Auth::user();
+ public function dashboard()
+{
+    // 1) Get the authenticated user’s Patient record
+    $patient = Auth::user()->patient;
 
-        // Fetch prescriptions for the patient
-        $prescriptions = Prescription::where('patient_id', $patient->id)->get();
+    // 2) Fetch prescriptions, schedules, assigned doctors (your existing code)…
+    $prescriptions   = Prescription::where('patient_id', $patient->patient_id)->get();
+    $schedules       = Schedule::where('patient_id', $patient->patient_id)->get();
+    $assignedDoctors = DoctorAssignment::where('patient_id', $patient->patient_id)->get();
 
-        // Fetch doctor's schedule for the patient
-        $schedules = Schedule::where('patient_id', $patient->id)->get();
+    // 3) Load the one-to-one billing information
+    //    (you already have this relation defined on Patient) :contentReference[oaicite:0]{index=0}
+    $billingInfo = $patient->billingInformation;
 
-        // Fetch assigned doctors for the patient
-        $assignedDoctors = DoctorAssignment::where('patient_id', $patient->id)->get();
+    // 4) Compute the real amount due
+    $amountDue = 
+        ($billingInfo->total_charges   ?? 0)
+      - ($billingInfo->payments_made   ?? 0)
+      - ($billingInfo->discount_amount ?? 0);
 
-        return view('patient.dashboard', compact('patient', 'prescriptions', 'schedules', 'assignedDoctors'));
-    }
-
+    // 5) Pass it all to the view
+    return view('patient.dashboard', compact(
+        'patient',
+        'prescriptions',
+        'schedules',
+        'assignedDoctors',
+        'amountDue'
+    ));
+}
     public function bills()
     {
         return $this->hasMany(Bill::class,'patient_id');
     }
+
+  public function serviceAssignments()
+    {
+        return $this->hasMany(ServiceAssignment::class, 'patient_id', 'patient_id');
+    }
+
+   public function prescriptions(): HasMany
+{
+    return $this->hasMany(Prescription::class, 'patient_id', 'patient_id');
+}
+
 }

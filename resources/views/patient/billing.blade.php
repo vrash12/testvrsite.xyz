@@ -120,21 +120,20 @@
                             </span>
                         </td>
                         <td class="text-center">
-                            <!-- Details Modal Trigger -->
-                            <button type="button"
-                                    class="btn btn-outline-secondary btn-sm btn-details"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#detailsModal"
-                                    data-bill-id="{{ $row->bill_id }}"
-                                    data-description="{{ $row->description }}">
-                                Details
-                            </button>
+                          <button
+  class="btn btn-outline-secondary btn-sm btn-details"
+  data-bs-toggle="modal"
+  data-bs-target="#detailsModal"
+  data-url="{{ route('patient.billing.chargeTrace', $row->billing_item_id) }}"
+  data-description="{{ $row->description }}">
+  Details
+</button>
                             <!-- Dispute Modal Trigger -->
                             <button type="button"
                                     class="btn btn-outline-danger btn-sm btn-dispute"
                                     data-bs-toggle="modal"
                                     data-bs-target="#disputeModal"
-                                    data-item-id="{{ $row->bill_id }}" {{-- or item_id if you have --}}
+                                  data-item-id="{{ $row->billing_item_id }}"
                                     data-date="{{ \Carbon\Carbon::parse($row->billing_date)->format('Y-m-d') }}"
                                     data-time="{{ \Carbon\Carbon::parse($row->billing_date)->format('h:ia') }}"
                                     data-ref="{{ $row->ref_no }}"
@@ -179,7 +178,8 @@
             action="{{ route('patient.disputes.store') }}"
             enctype="multipart/form-data">
         @csrf
-        <input type="hidden" name="bill_item_id" id="d-item-id">
+     <input type="hidden" name="bill_item_id" id="d-item-id">
+
 
         <div class="modal-body">
           {{-- Context panel --}}
@@ -267,8 +267,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Fill dispute modal
   document.querySelectorAll('.btn-dispute').forEach(btn => {
     btn.addEventListener('click', e => {
-      const d = e.currentTarget.dataset;
-      document.getElementById('d-item-id').value   = d.itemId;
+    const d = e.currentTarget.dataset;
+    document.getElementById('d-item-id').value    = d.itemId;
       document.getElementById('d-date').textContent  = d.date;
       document.getElementById('d-ref').textContent   = d.ref;
       document.getElementById('d-amount').textContent= d.amount;
@@ -278,33 +278,45 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Fill details modal (placeholder data)
-  document.querySelectorAll('.btn-details').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const bid = e.currentTarget.dataset.billId;
-      const desc = e.currentTarget.dataset.description;
+document.querySelectorAll('.btn-details').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const url = btn.dataset.url;
+      const desc = btn.dataset.description;
 
-      document.getElementById('timeline-content').innerHTML = `
-        <ul class="list-group mb-3">
-          <li class="list-group-item">
-            <span class="badge bg-secondary rounded-circle me-2">C</span>
-            Charge Created – ${desc}
-            <div class="small text-muted">2025-04-11 16:00 by Dr. Sarah Johnson • Cardiology</div>
-          </li>
-          <li class="list-group-item">
-            <span class="badge bg-success rounded-circle me-2">V</span>
-            Charge Verified
-            <div class="small text-muted">2025-04-11 16:30 by Maria Rodriguez • Billing</div>
-          </li>
-        </ul>`;
+      // show loading placeholders
+      document.getElementById('timeline-content').innerHTML =
+        '<p class="text-muted">Loading timeline…</p>';
+      document.getElementById('charge-details-content').innerHTML =
+        '<p class="text-muted">Loading details…</p>';
 
-      document.getElementById('charge-details-content').innerHTML = `
-        <table class="table table-sm">
-          <tr><th>Description</th><td>${desc}</td></tr>
-          <tr><th>Bill ID</th><td>${bid}</td></tr>
-          <tr><th>Status</th><td>Complete</td></tr>
-          <tr><th>Department</th><td>Cardiology</td></tr>
-        </table>`;
+      try {
+        const res  = await fetch(url);
+        const html = await res.text();
+
+        // parse the returned HTML
+        const parser = new DOMParser();
+        const doc    = parser.parseFromString(html, 'text/html');
+
+        // extract the two fragments
+        const tl = doc.querySelector('#charge-trace-timeline');
+        const dt = doc.querySelector('#charge-trace-details');
+
+        // inject into your modal
+        document.getElementById('timeline-content').innerHTML =
+          tl ? tl.innerHTML
+             : `<li class="list-group-item text-center text-muted"><em>No trace records found.</em></li>`;
+
+        document.getElementById('charge-details-content').innerHTML =
+          dt ? dt.innerHTML
+             : `<p class="text-muted">No details available.</p>`;
+
+      } catch (err) {
+        console.error('Failed to load charge history', err);
+        document.getElementById('timeline-content').innerHTML =
+          '<p class="text-danger">Error loading timeline.</p>';
+        document.getElementById('charge-details-content').innerHTML =
+          '<p class="text-danger">Error loading details.</p>';
+      }
     });
   });
 });

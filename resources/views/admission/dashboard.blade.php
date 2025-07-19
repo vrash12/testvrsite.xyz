@@ -61,7 +61,8 @@
               <td>{{ $adm->patient->patient_first_name }} {{ $adm->patient->patient_last_name }}</td>
               <td>{{ $adm->room_number }}</td>
               <td>{{ $adm->doctor->doctor_name }}</td>
-              <td>{{ $adm->medicalDetail->primary_reason ?? '—' }}</td>
+           <td>{{ $adm->patient->medicalDetail->primary_reason ?? '—' }}</td>
+
               <td>
                 <a href="{{ route('admission.patients.show',$adm->patient) }}"
                    class="btn btn-sm btn-outline-secondary">

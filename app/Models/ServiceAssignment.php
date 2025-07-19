@@ -13,14 +13,12 @@ class ServiceAssignment extends Model
     protected $primaryKey = 'assignment_id';
     public $timestamps = false; // no created_at/updated_at columns
     protected $guarded = [];
+protected $casts = [
+    'datetime' => 'datetime',
+];
 
-    /**
-     * Doctor who placed the order
-     */
-    public function doctor(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'doctor_id', 'user_id');
-    }
+   public function service()  { return $this->belongsTo(HospitalService::class, 'service_id'); }
+    public function doctor()   { return $this->belongsTo(Doctor::class,         'doctor_id');  }
 
     /**
      * Patient who the order belongs to
@@ -30,11 +28,5 @@ class ServiceAssignment extends Model
         return $this->belongsTo(Patient::class, 'patient_id', 'patient_id');
     }
 
-    /**
-     * The service/medication assigned
-     */
-    public function service(): BelongsTo
-    {
-        return $this->belongsTo(HospitalService::class, 'service_id', 'service_id');
-    }
+  
 }

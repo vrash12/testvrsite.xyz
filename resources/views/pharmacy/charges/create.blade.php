@@ -1,4 +1,4 @@
-{{--resources/views/pharmacy/create.blade.php--}}
+{{-- resources/views/pharmacy/charges/create.blade.php --}}
 
 @extends('layouts.pharmacy')
 
@@ -15,7 +15,7 @@
       <select name="patient_id" class="form-select @error('patient_id') is-invalid @enderror" required>
         <option value="">Select patient…</option>
         @foreach($patients as $p)
-          <option value="{{ $p->patient_id }}" @selected(old('patient_id')==$p->patient_id)>
+          <option value="{{ $p->patient_id }}" @selected(old('patient_id') == $p->patient_id)>
             {{ $p->patient_first_name }} {{ $p->patient_last_name }}
           </option>
         @endforeach
@@ -35,7 +35,7 @@
               <option value="">Select medication…</option>
               @foreach($services as $s)
                 <option value="{{ $s->service_id }}" data-price="{{ $s->price }}">
-                  {{ $s->department->department_name }} – ₱{{ number_format($s->price,2) }}
+                  {{ $s->service_name }} – ₱{{ number_format($s->price,2) }}
                 </option>
               @endforeach
             </select>
@@ -46,7 +46,7 @@
           <div class="col-md-2">
             <label class="form-label">Quantity</label>
             <input type="number" name="medications[0][quantity]" min="1" 
-                   class="form-control quantity-input @error('medications.0.quantity') is-invalid @enderror" required>
+                   class="form-control @error('medications.0.quantity') is-invalid @enderror" required>
             @error('medications.0.quantity')
               <div class="invalid-feedback">{{ $message }}</div>
             @enderror
@@ -71,8 +71,15 @@
     <div class="row g-3 mb-3">
       <div class="col-md-6">
         <label class="form-label">Prescribing Doctor</label>
-        <input type="text" name="prescribing_doctor" 
-               class="form-control @error('prescribing_doctor') is-invalid @enderror" required>
+        <select name="prescribing_doctor" 
+                class="form-select @error('prescribing_doctor') is-invalid @enderror" required>
+          <option value="">Select doctor…</option>
+          @foreach($doctors as $doc)
+            <option value="{{ $doc->doctor_name }}" @selected(old('prescribing_doctor') == $doc->doctor_name)>
+              {{ $doc->doctor_name }}
+            </option>
+          @endforeach
+        </select>
         @error('prescribing_doctor')<div class="invalid-feedback">{{ $message }}</div>@enderror
       </div>
       <div class="col-md-6">
@@ -87,7 +94,7 @@
     <div class="mb-3">
       <label class="form-label">Notes (Optional)</label>
       <textarea name="notes" rows="3" 
-                class="form-control @error('notes') is-invalid @enderror"></textarea>
+                class="form-control @error('notes') is-invalid @enderror">{{ old('notes') }}</textarea>
       @error('notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
 
@@ -97,27 +104,66 @@
     </div>
 
     <div class="text-end">
-      <a href="{{ route('pharmacy.index') }}" class="btn btn-secondary">Cancel</a>
+      <a href="{{ route('pharmacy.dashboard') }}" class="btn btn-secondary">Cancel</a>
       <button type="submit" class="btn btn-primary">Create Charge</button>
     </div>
   </form>
 </div>
+@endsection
 
-{{-- Simple JS to clone medication blocks & compute totals --}}
 @push('scripts')
 <script>
-  let idx = 1;
-  document.getElementById('add-medication').addEventListener('click', () => {
-    const tpl = document.querySelector('.medication-item').cloneNode(true);
-    tpl.querySelector('h6').textContent = `Medication #${idx + 1}`;
-    tpl.querySelectorAll('select, input').forEach(el => {
-      const name = el.getAttribute('name').replace(/\[\d+\]/, `[${idx}]`);
-      el.name = name;
-      if (el.type !== 'select-one') el.value = '';
+  (function() {
+    let idx = 1;
+    const list = document.getElementById('medications-list');
+
+    // Add new medication block
+    document.getElementById('add-medication').addEventListener('click', () => {
+      const tpl = list.querySelector('.medication-item').cloneNode(true);
+      tpl.querySelector('h6').textContent = `Medication #${idx + 1}`;
+
+      // Re-index only elements that have a name attribute
+      tpl.querySelectorAll('[name]').forEach(el => {
+        el.name = el.name.replace(/\[\d+\]/, `[${idx}]`);
+        if (!el.matches('select')) {
+          el.value = '';
+        }
+      });
+
+      // Clear unit/total fields
+      tpl.querySelector('.unit-price').value = '';
+      tpl.querySelector('.total-price').value = '';
+
+      list.append(tpl);
+      idx++;
     });
-    document.getElementById('medications-list').append(tpl);
-  });
-  // (Omitted: JS to pull unit-price from data-price on select change, multiply qty, update totals)
+
+    // Helper to recalc a single line and the grand total
+    function updateLine(item) {
+      const sel   = item.querySelector('select[name*="[service_id]"]');
+      const qty   = item.querySelector('input[name*="[quantity]"]');
+      const unit  = item.querySelector('.unit-price');
+      const total = item.querySelector('.total-price');
+
+      const price   = parseFloat(sel.selectedOptions[0]?.dataset.price || 0);
+      const qtyVal  = parseInt(qty.value) || 0;
+      unit.value    = price.toFixed(2);
+      total.value   = (price * qtyVal).toFixed(2);
+
+      // Grand total
+      let gt = 0;
+      document.querySelectorAll('.total-price').forEach(el => {
+        gt += parseFloat(el.value) || 0;
+      });
+      document.getElementById('grand-total').textContent = gt.toFixed(2);
+    }
+
+    // Delegate changes for service or quantity
+    list.addEventListener('change', e => {
+      if (e.target.matches('select[name*="[service_id]"], input[name*="[quantity]"]')) {
+        updateLine(e.target.closest('.medication-item'));
+      }
+    });
+  })();
 </script>
 @endpush
-@endsection

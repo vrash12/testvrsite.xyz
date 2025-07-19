@@ -10,11 +10,11 @@ use App\Models\Department;
 
 class ResourceController extends Controller
 {
-    public function index()
-    {
-        $rooms = Room::with('department','beds')->get();
-        return view('admin.resources.index', compact('rooms'));
-    }
+   public function index()
+{
+    $rooms = Room::with(['department', 'beds'])->get();
+    return view('admin.resources.index', compact('rooms'));
+}
 
     public function create()
     {

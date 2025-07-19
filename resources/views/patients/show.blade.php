@@ -40,6 +40,7 @@
       <p><strong>Birthday:</strong> {{ $patient->patient_birthday?->format('M d, Y') ?? '—' }}</p>
       <p><strong>Civil Status:</strong> {{ $patient->civil_status ?? '—' }}</p>
       <p><strong>Address:</strong> {{ $patient->address ?? '—' }}</p>
+       <p><strong>Sex:</strong> {{ $patient->sex ?? '—' }}</p>
     </div>
   </div>
 
@@ -57,8 +58,19 @@
       </p>
 
       @php
-        $history   = json_decode($patient->medicalDetail?->medical_history ?? '[]', true);
-        $allergies = json_decode($patient->medicalDetail?->allergies        ?? '[]', true);
+       $history = $patient->medicalDetail?->medical_history;
+  if (is_string($history)) {
+      $history = json_decode($history, true) ?: [];
+  } elseif (! is_array($history)) {
+      $history = [];
+  }
+
+  $allergies = $patient->medicalDetail?->allergies;
+  if (is_string($allergies)) {
+      $allergies = json_decode($allergies, true) ?: [];
+  } elseif (! is_array($allergies)) {
+      $allergies = [];
+  }
       @endphp
 
       <p><strong>Medical History:</strong></p>

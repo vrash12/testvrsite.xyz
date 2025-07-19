@@ -21,8 +21,13 @@ class PharmacyCharge extends Model
         return $this->belongsTo(Patient::class, 'patient_id');
     }
 
-    public function items(): HasMany
-    {
-        return $this->hasMany(PharmacyChargeItem::class, 'charge_id');
-    }
+   public function items()
+{
+    return $this->hasMany(PharmacyChargeItem::class, 'charge_id');
+}
+
+public function getTotalAmountAttribute()
+{
+    return $this->items->sum('amount');
+}
 }

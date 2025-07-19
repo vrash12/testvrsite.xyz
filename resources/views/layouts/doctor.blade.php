@@ -38,20 +38,25 @@
                 <small>Physician ID: {{ Auth::id() }}</small>
             </div>
 
-            {{-- Navigation --}}
-            <nav class="mb-auto ms-2 mt-4">
+        <nav class="ms-2 mt-4">
+    <a href="{{ route('doctor.dashboard') }}"
+       class="nav-link d-flex align-items-center text-white mb-2">
+      <i class="fas fa-home fa-xl me-3"></i>
+      <span>Home</span>
+    </a>
 
-                <a href="{{ route('') }}" class="nav-link d-flex align-items-center text-white">
-                    <i class="fas fa-home fa-xl me-3"></i>
-                    <span>Home</span>
-                </a>
+    <a href="{{ route('doctor.orders.index') }}"
+       class="nav-link d-flex align-items-center text-white mb-2">
+      <i class="fas fa-clipboard-list fa-xl me-3"></i>
+      <span>Orders</span>
+    </a>
 
-                <a href="{{ route('') }}" class="nav-link d-flex align-items-center text-white">
-                    <i class="fas fa-prescription fa-xl me-3"></i>
-                    <span>Prescribe</span>
-                </a>
-
-            </nav>
+    <a href="{{ route('doctor.dashboard') }}"
+       class="nav-link d-flex align-items-center text-white mb-2">
+      <i class="fas fa-prescription fa-xl me-3"></i>
+      <span>Prescribe</span>
+    </a>
+  </nav>
 
             {{-- Footer --}}
             <div class="footer text-center mt-auto pt-4">

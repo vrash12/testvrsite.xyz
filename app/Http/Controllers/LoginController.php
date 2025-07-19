@@ -43,7 +43,7 @@ class LoginController extends Controller
         'pharmacy'      => redirect()->route('pharmacy.dashboard'),
         'doctor'        => redirect()->route('doctor.dashboard'),
         'patient'       => redirect()->route('patient.dashboard'),
-        'imaging'       => redirect()->route('imaging.dashboard'),
+        'laboratory'    => redirect()->route('laboratory.dashboard'),
         'supplies'      => redirect()->route('supplies.dashboard'),
         'operating_room'=> redirect()->route('operating-room.dashboard'),
         'billing'       => redirect()->route('billing.dashboard'),

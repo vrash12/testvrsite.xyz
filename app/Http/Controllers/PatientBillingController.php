@@ -9,6 +9,13 @@ use App\Models\BillingInformation;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Models\Dispute;
+use App\Models\ServiceAssignment;
+use App\Models\BillItem;
+use App\Helpers\Audit;
+use Illuminate\Support\Str;
+use Illuminate\Pagination\LengthAwarePaginator;
+use App\Models\Patient;
+
 
 class PatientBillingController extends Controller
 {
@@ -17,70 +24,169 @@ class PatientBillingController extends Controller
         $this->middleware(['auth']);      // default web guard
     }
 
-    /**
-     * Display the Billing & Transactions dashboard.
-     */
-    public function index(Request $request)
+
+public function index(Request $request)
     {
-        $patient = Auth::user()->patient;
+        // 1️⃣ Get the logged-in patient
+        $patient = Auth::user()->patient
+                 ?? abort(404, 'No patient profile found.');
 
-        // 1) All admissions for dropdown
-        $admissions = $patient->admissionDetail()
-                              ->orderByDesc('admission_date')
-                              ->get();
+        // 2️⃣ Build the admissions dropdown
+        $admissions = $patient
+            ->admissionDetail()
+            ->orderByDesc('admission_date')
+            ->get();
 
-        // Admission filter: ?admission_id=123
-        $admissionId = $request->input('admission_id', $admissions->first()?->admission_id);
+        $admissionId = $request->input('admission_id')
+                     ?? optional($admissions->first())->admission_id;
 
-        // 2) Summary cards (from billing_information)
-        $billingInfo = BillingInformation::where('patient_id', $patient->patient_id)->first();
+        // 3️⃣ Compute total charges & balance
+        $chargesQ = BillItem::join('bills','bill_items.billing_id','=','bills.billing_id')
+            ->where('bills.patient_id', $patient->patient_id)
+            ->when($admissionId, fn($q) => $q->where('bills.admission_id', $admissionId));
 
+        $totalCharges = (float) $chargesQ->sum('bill_items.amount');
+        $paymentsMade  = 0; // TODO: implement real payments
         $totals = [
-            'total'    => $billingInfo?->total_charges    ?? 0,
-            'balance'  => ($billingInfo?->total_charges ?? 0) - ($billingInfo?->payments_made ?? 0),
-            'discount' => $billingInfo?->discount_amount ?? 0,
+            'total'    => $totalCharges,
+            'balance'  => $totalCharges - $paymentsMade,
+            'discount' => 0,
         ];
 
-        // 3) Table rows – flatten all items under selected admission
-        $items = Bill::with(['items.service.department'])
+        // 4️⃣ Admission‐scoped bill items
+        $admissionItems = Bill::with(['items.service.department','items.dispute'])
             ->where('patient_id', $patient->patient_id)
             ->when($admissionId, fn($q) => $q->where('admission_id', $admissionId))
             ->get()
-            ->flatMap(function ($bill) {
-                return $bill->items->map(function ($item) use ($bill) {
-                    return (object) [
-                        'billing_date' => $bill->billing_date,
-                        'ref_no'       => $bill->billing_id,
-                        'description'  => $item->service->service_name,
-                        'provider'     => $item->service->department->department_name ?? '-',
-                        'amount'       => $item->total,
-                        'status'       => $item->status ?? $bill->payment_status,
-                        'bill_id'      => $bill->billing_id,
-                    ];
-                });
+            ->flatMap(function($bill) {
+                // here we use a normal anonymous function so we can refer to $bill inside
+                return $bill->items->map(fn($item) => (object)[
+                    'billing_item_id' => $item->billing_item_id,
+                    'billing_date'    => $bill->billing_date,
+                    'ref_no'          => $bill->billing_id,
+                    'description'     => $item->service?->service_name ?? '—',
+                    'provider'        => $item->service?->department?->department_name ?? '—',
+                    'amount'          => $item->amount,
+                    'status'          => $item->dispute
+                                        ? $item->dispute->status
+                                        : ($item->status ?? $bill->payment_status),
+                ]);
             });
 
-        // Optional simple search
-        if ($search = $request->input('q')) {
-            $items = $items->filter(fn($row) =>
-                str_contains(strtolower($row->description), strtolower($search))
+        // 5️⃣ Manual (no-admission) bill items
+        $manualItems = Bill::with(['items.service.department','items.dispute'])
+            ->where('patient_id', $patient->patient_id)
+            ->whereNull('admission_id')
+            ->get()
+            ->flatMap(function($bill) {
+                return $bill->items->map(fn($item) => (object)[
+                    'billing_item_id' => $item->billing_item_id,
+                    'billing_date'    => $bill->billing_date,
+                    'ref_no'          => $bill->billing_id,
+                    'description'     => $item->service?->service_name ?? '—',
+                    'provider'        => $item->service?->department?->department_name ?? '—',
+                    'amount'          => $item->amount,
+                    'status'          => $item->dispute
+                                        ? $item->dispute->status
+                                        : ($item->status ?? $bill->payment_status),
+                ]);
+            });
+
+        // 6️⃣ Service assignments
+        $assignmentItems = ServiceAssignment::with('service.department')
+            ->where('patient_id', $patient->patient_id)
+            ->get()
+            ->map(fn($as) => (object)[
+                'billing_item_id' => 'SA-'.$as->assignment_id,
+                'billing_date'    => $as->datetime ?? $as->created_at,
+                'ref_no'          => 'SA'.$as->assignment_id,
+                'description'     => $as->service?->service_name ?? '—',
+                'provider'        => $as->service?->department?->department_name ?? '—',
+                'amount'          => $as->amount ?? 0,
+                'status'          => $as->service_status,
+            ]);
+
+        // 7️⃣ Merge all streams
+        $items = collect($assignmentItems)
+            ->concat($admissionItems)
+            ->concat($manualItems);
+
+        // 8️⃣ Apply search filter
+        if ($s = $request->input('q')) {
+            $items = $items->filter(fn($r) =>
+                str_contains(strtolower($r->description), strtolower($s))
             );
         }
 
-        // Optional sort order (?order=asc|desc)
-        $items = $items->sortBy('billing_date', descending: $request->input('order','desc')==='desc');
+        // 9️⃣ Sort by billing_date
+        $desc = $request->input('order','desc') === 'desc';
+        $items = $items->sortBy('billing_date', descending: $desc)->values();
 
-        return view('patient.billing', compact(
-            'admissions',
-            'admissionId',
-            'totals',
-            'items'
-        ));
+        // 🔟 Paginate manually at 10 per page
+        $perPage = 10;
+        $page    = $request->input('page', 1);
+        $total   = $items->count();
+        $current = $items->forPage($page, $perPage);
+
+        $paginator = new LengthAwarePaginator(
+            $current,
+            $total,
+            $perPage,
+            $page,
+            [
+                'path'  => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        // 1️⃣1️⃣ Return the view
+        return view('patient.billing', [
+            'admissions'  => $admissions,
+            'admissionId' => $admissionId,
+            'totals'      => $totals,
+            'items'       => $paginator,
+        ]);
+    }
+public function chargeTrace(string $key)
+{
+    if (Str::startsWith($key, 'SA-')) {
+        /* ---------- ServiceAssignment branch ---------- */
+        $assignmentId = intval(Str::after($key, 'SA-'));
+
+        $as = ServiceAssignment::with(['service.department','doctor'])
+                 ->findOrFail($assignmentId);
+
+        // synthesise a pseudo-charge object so the same Blade works
+        $charge = (object) [
+            'is_assignment'   => true,
+            'billing_item_id' => 'SA-'.$as->assignment_id,
+            'service'         => $as->service,
+            'amount'          => $as->amount ?? 0,
+            'status'          => $as->service_status,
+            'billing_date'    => $as->datetime ?? $as->created_at,
+            'logs'            => collect([
+                (object)[
+                    'action'     => 'created',
+                    'actor'      => optional($as->doctor)->doctor_name ?? '—',
+                    'created_at' => $as->datetime ?? $as->created_at,
+                ],
+                $as->service_status === 'completed'
+                    ? (object)[
+                        'action'     => 'completed',
+                        'actor'      => optional($as->doctor)->doctor_name ?? '—',
+                        'created_at' => $as->updated_at ?? $as->datetime,
+                      ]
+                    : null,
+            ])->filter(),
+        ];
+    } else {
+        /* ---------- BillItem branch ---------- */
+        $charge = BillItem::with(['service.department','logs'])
+                  ->findOrFail(intval($key));
     }
 
-    /**
-     * Show a single Bill (modal / separate page).
-     */
+    return view('patient.billing.chargeTrace', compact('charge'));
+}
     public function show(Bill $bill)
     {
         $this->authorize('view', $bill); // optional policy

@@ -38,19 +38,19 @@
                 {{-- Middle --}}
                 <nav class="mb-auto ms-2 mt-4">
 
-                    <a href="{{ route('') }}"  class="nav-link d-flex text-white gap-2 px-2 py-2">
+                    <a href="{{ route('laboratory.dashboard') }}"  class="nav-link d-flex text-white gap-2 px-2 py-2">
                         <span class="icon justify-content-center align-items-center">
                             <i class="fas fa-home fa-xl"></i>
                         </span>
                         <span class="ms-2">Home</span>
                     </a>
-                    <a href="{{ route('') }}"  class="nav-link d-flex text-white gap-2 px-2 py-2">
+                    <a href="{{ route('laboratory.queue') }}"  class="nav-link d-flex text-white gap-2 px-2 py-2">
                         <span class="icon justify-content-center align-items-center">
                             <i class="fa-solid fa-flask fa-xl"></i>
                         </span>
                         <span class="ms-2">Queue</span>
                     </a>
-                    <a href="{{ route('') }}"  class="nav-link d-flex text-white gap-2 px-2 py-2">
+                    <a href="{{ route('laboratory.create') }}"  class="nav-link d-flex text-white gap-2 px-2 py-2">
                         <span class="icon justify-content-center align-items-center">
                             <<i class="fa-solid fa-circle-dollar-to-slot fa-xl"></i>
                         </span>

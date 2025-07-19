@@ -23,6 +23,7 @@ class User extends Authenticatable
         'role',
         'department_id',
         'room_id',
+          'doctor_id',  
         'bed_id',
     ];
 
@@ -41,4 +42,17 @@ class User extends Authenticatable
 {
     return $this->belongsTo(\App\Models\Patient::class, 'patient_id');
 }
+
+public function doctor()
+{
+    return $this->belongsTo(Doctor::class, 'doctor_id', 'doctor_id');
+}
+
+//admissionDetail
+public function admissionDetail()
+{
+    return $this->hasOne(AdmissionDetail::class, 'patient_id', 'patient_id');
+
+}
+
 }

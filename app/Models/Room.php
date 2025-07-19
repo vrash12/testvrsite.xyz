@@ -19,6 +19,10 @@ class Room extends Model
     {
         return $this->hasMany(Bed::class, 'room_id', 'room_id');
     }
+public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class, 'department_id', 'department_id');
+    }
 
     /**
      * How many beds are occupied?

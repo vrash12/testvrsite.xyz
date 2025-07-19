@@ -96,13 +96,14 @@
         <span class="ms-2">My Account</span>
       </a>
 
-      <a href="{{ route('patient.billing') }}" class="nav-link d-flex align-items-center px-2 py-2 text-white">
-        <i class="fas fa-file-invoice-dollar fa-lg icon"></i>
+     <a href="{{ route('patient.billing') }}"
+     class="nav-link d-flex align-items-center px-2 py-2 text-white">
+  <i class="fa-solid fa-file-invoice-dollar fa-lg icon"></i>
         <span class="ms-2">Billing</span>
       </a>
 
-      <a href="{{ route('patient.notifications') }}" class="nav-link d-flex align-items-center px-2 py-2 text-white">
-        <i class="fas fa-bell fa-lg icon"></i>
+      <a href="{{ route('patient.notification') }}" class="nav-link d-flex align-items-center px-2 py-2 text-white">
+      <i class="fa-solid fa-bell fa-lg icon"></i>
         <span class="ms-2">Notifications</span>
       </a>
     </nav>

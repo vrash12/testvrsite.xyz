@@ -18,10 +18,10 @@ class AdmissionDetail extends Model
         'updated_at'     => 'datetime',
     ];
 
-    public function patient(): BelongsTo
-    {
-        return $this->belongsTo(Patient::class, 'patient_id');
-    }
+  public function patient()
+{
+    return $this->belongsTo(Patient::class,'patient_id');
+}
 
     public function department(): BelongsTo
     {
@@ -32,14 +32,10 @@ class AdmissionDetail extends Model
     {
         return $this->belongsTo(Doctor::class, 'doctor_id');
     }
-
-    /**
-     * Link admission_details.room_number → rooms.room_number
-     */
-    public function room(): BelongsTo
-    {
-        return $this->belongsTo(Room::class, 'room_number', 'room_number');
-    }
+public function room()
+{
+    return $this->belongsTo(Room::class,'room_id');
+}
 
     /**
      * (Optionally) if you also want to fetch the Bed by its number:
