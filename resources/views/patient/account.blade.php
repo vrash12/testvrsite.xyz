@@ -22,88 +22,79 @@
                     <input type="file" name="profile_photo" form="profile-form" class="form-control-file">
                 </div>
             </div>
-            {{-- PROFILE FORM --}}
-           <form id="profile-form" method="POST" action="{{ route('patient.account.update') }}" enctype="multipart/form-data">
-                @csrf @method('PATCH')
+      <form id="profile-form" method="POST" action="{{ route('patient.account.update') }}" enctype="multipart/form-data">
+  @csrf @method('PATCH')
 
-                <div class="row g-3 mb-3">
+  <div class="row g-3 mb-3">
+    <div class="col-md-4">
+      <label class="form-label">Last Name</label>
+      <input type="text" name="patient_last_name"
+             value="{{ old('patient_last_name', $patient->patient_last_name) }}"
+             class="form-control" required>
+    </div>
 
-                    {{-- Last Name --}}
-                    <div class="col-md-4">
-                        <label class="form-label">Last Name</label>
-                        <input type="text" name="patient_last_name"
-                               value="{{ old('patient_last_name', $patient->patient_last_name) }}"
-                               class="form-control" required>
-                    </div>
+    <div class="col-md-4">
+      <label class="form-label">First Name</label>
+      <input type="text" name="patient_first_name"
+             value="{{ old('patient_first_name', $patient->patient_first_name) }}"
+             class="form-control" required>
+    </div>
 
-                    {{-- First Name --}}
-                    <div class="col-md-4">
-                        <label class="form-label">First Name</label>
-                        <input type="text" name="patient_first_name"
-                               value="{{ old('patient_first_name', $patient->patient_first_name) }}"
-                               class="form-control" required>
-                    </div>
+    <div class="col-md-4">
+      <label class="form-label">Middle Initial</label>
+      <input type="text" name="middle_initial"
+             value="{{ old('middle_initial', $patient->middle_initial) }}"
+             maxlength="1" class="form-control">
+    </div>
 
-                    {{-- Middle Initial --}}
-                    <div class="col-md-4">
-                        <label class="form-label">Middle Initial</label>
-                        <input type="text" name="middle_initial"
-                               value="{{ old('middle_initial', $patient->middle_initial) }}"
-                               maxlength="1" class="form-control">
-                    </div>
+    <div class="col-md-2">
+      <label class="form-label">Sex</label>
+      <select name="sex" class="form-select">
+        <option value="">—</option>
+        <option value="male"   @selected(old('sex', strtolower($patient->sex ?? ''))=='male')>Male</option>
+        <option value="female" @selected(old('sex', strtolower($patient->sex ?? ''))=='female')>Female</option>
+        <option value="other"  @selected(old('sex', strtolower($patient->sex ?? ''))=='other')>Other</option>
+      </select>
+    </div>
 
-                    {{-- Sex --}}
-                    <div class="col-md-2">
-                        <label class="form-label">Sex</label>
-                        <select name="sex" class="form-select">
-                            <option value="">—</option>
-                            <option value="male"   @selected(old('sex',$patient->sex)=='male')>Male</option>
-                            <option value="female" @selected(old('sex',$patient->sex)=='female')>Female</option>
-                            <option value="other"  @selected(old('sex',$patient->sex)=='other')>Other</option>
-                        </select>
-                    </div>
+    <div class="col-md-3">
+      <label class="form-label">Birthday</label>
+      <input type="date" name="patient_birthday"
+             value="{{ old('patient_birthday', optional($patient->patient_birthday)->format('Y-m-d')) }}"
+             class="form-control">
+    </div>
 
-                    {{-- Birthday --}}
-                    <div class="col-md-3">
-                        <label class="form-label">Birthday</label>
-                        <input type="date" name="patient_birthday"
-                               value="{{ old('patient_birthday', optional($patient->patient_birthday)->format('Y-m-d')) }}"
-                               class="form-control">
-                    </div>
+    <div class="col-md-3">
+      <label class="form-label">Civil Status</label>
+      <select name="civil_status" class="form-select">
+        <option value="">—</option>
+        @foreach(['single','married','widowed','divorced'] as $status)
+          <option value="{{ $status }}"
+            @selected(old('civil_status', $patient->civil_status)==$status)>
+            {{ ucfirst($status) }}
+          </option>
+        @endforeach
+      </select>
+    </div>
 
-                    {{-- Civil Status --}}
-                    <div class="col-md-3">
-                        <label class="form-label">Civil Status</label>
-                        <select name="civil_status" class="form-select">
-                            <option value="">—</option>
-                            @foreach(['single','married','widowed','divorced'] as $status)
-                                <option value="{{ $status }}"
-                                    @selected(old('civil_status',$patient->civil_status)==$status)>
-                                    {{ ucfirst($status) }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+    <div class="col-md-4">
+      <label class="form-label">Email</label>
+      <input type="email" name="email"
+             value="{{ old('email', $patient->email) }}"
+             class="form-control" required>
+    </div>
 
-                    {{-- Email --}}
-                    <div class="col-md-4">
-                        <label class="form-label">Email</label>
-                        <input type="email" name="email"
-                               value="{{ old('email', $patient->email) }}"
-                               class="form-control" required>
-                    </div>
+    <div class="col-md-4">
+      <label class="form-label">Contact #</label>
+      <input type="text" name="phone_number"
+             value="{{ old('phone_number', $patient->phone_number) }}"
+             class="form-control">
+    </div>
+  </div>
 
-                    {{-- Contact --}}
-                    <div class="col-md-4">
-                        <label class="form-label">Contact #</label>
-                        <input type="text" name="phone_number"
-                               value="{{ old('phone_number', $patient->phone_number) }}"
-                               class="form-control">
-                    </div>
-                </div>
+  <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+</form>
 
-                <button type="submit" class="btn btn-primary px-4">Save Changes</button>
-            </form>
 
         </div>
     </div>

@@ -9,6 +9,15 @@
     <h5 class="hdng">Laboratory Services Management</h5>
     <p class="lead">Welcome to Laboratory! Manage Lab Charges and Service Completion</p>
   </div>
+  @if($errors->any())
+  <div class="alert alert-danger">
+    <ul class="mb-0">
+      @foreach($errors->all() as $msg)
+        <li>{{ $msg }}</li>
+      @endforeach
+    </ul>
+  </div>
+@endif
 
 {{-- Patient & Doctor Selectors --}}
     <div class="card mb-3">
@@ -48,7 +57,8 @@
     </div>
 
   {{-- Charge Composer --}}
-  <form method="POST" action="{{ route('laboratory.manual.store') }}">
+  <form method="POST" action="{{ route('laboratory.store') }}">
+
     @csrf
     <div class="card border-0 mb-4">
       <div class="card-header bg-white d-flex justify-content-between align-items-center">

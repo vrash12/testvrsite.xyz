@@ -1,3 +1,4 @@
+{{--resources/views/billing/dashboard.blade.php--}}
 @extends('layouts.billing')
 
 @section('content')

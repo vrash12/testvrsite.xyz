@@ -1,23 +1,42 @@
 <?php
 // app/Models/Dispute.php
+
 namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;   // ← add this
 use App\Models\BillItem;
 use App\Models\Patient;
-use Illuminate\Database\Eloquent\Model as Models;
 
-class Dispute extends Models
+class Dispute extends Model
 {
     protected $primaryKey = 'dispute_id';
     public $timestamps    = false;
 
     protected $fillable = [
-        'billing_item_id', 'patient_id', 'datetime',
-        'reason', 'status', 'approved_by'
+        'billing_item_id',
+        'patient_id',
+        'datetime',
+        'reason',
+        'status',
+        'approved_by',
     ];
 
-   public function billItem()
-{
-    return $this->belongsTo(BillItem::class, 'billing_item_id', 'billing_item_id');
-}
-    public function patient()  { return $this->belongsTo(Patient::class,  'patient_id'); }
+    public function billItem(): BelongsTo
+    {
+        return $this->belongsTo(
+            BillItem::class,
+            'billing_item_id',
+            'billing_item_id'
+        );
+    }
+
+    public function patient(): BelongsTo
+    {
+        return $this->belongsTo(
+            Patient::class,
+            'patient_id',
+            'patient_id'
+        );
+    }
 }

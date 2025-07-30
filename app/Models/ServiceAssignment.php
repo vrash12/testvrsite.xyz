@@ -15,14 +15,17 @@ class ServiceAssignment extends Model
     protected $guarded = [];
 protected $casts = [
     'datetime' => 'datetime',
+    'created_at' => 'datetime',
+        'updated_at' => 'datetime',
 ];
 
    public function service()  { return $this->belongsTo(HospitalService::class, 'service_id'); }
     public function doctor()   { return $this->belongsTo(Doctor::class,         'doctor_id');  }
-
-    /**
-     * Patient who the order belongs to
-     */
+    public function billItem() { return $this->belongsTo(BillItem::class,'bill_item_id','billing_item_id'); }
+    public function getDatetimeAttribute()
+    {
+        return $this->created_at;
+    }
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class, 'patient_id', 'patient_id');

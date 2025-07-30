@@ -12,8 +12,17 @@ class Room extends Model
         'department_id',
         'room_number',
         'status',
-        'capacity',       // ← new
+        'capacity',    
+          'rate',   
     ];
+
+      protected $casts = [
+        'rate'     => 'decimal:2',
+    ];
+public function getRateFormattedAttribute(): string
+    {
+        return number_format($this->rate, 2);
+    }
 
     public function beds()
     {

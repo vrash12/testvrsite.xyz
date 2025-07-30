@@ -22,12 +22,10 @@ class BillItem extends Model
         return $this->belongsTo(Bill::class, 'billing_id');
     }
 
-    /** The HospitalService this charge refers to */
-    public function service(): BelongsTo
+    public function service()
     {
         return $this->belongsTo(HospitalService::class, 'service_id', 'service_id');
     }
-
     /** Optional link back to a pharmacy or lab prescription item */
     public function prescriptionItem(): BelongsTo
     {
@@ -39,9 +37,10 @@ class BillItem extends Model
     {
         return $this->belongsTo(ServiceAssignment::class, 'assignment_id');
     }
-      public function logs()
+
+    public function logs()
     {
-        return $this->hasMany(AuditLog::class,'bill_item_id')->latest('created_at');
+        return $this->hasMany(AuditLog::class, 'bill_item_id', 'billing_item_id');
     }
     public function dispute()               // ← one-to-one
 {
@@ -52,4 +51,17 @@ class BillItem extends Model
     {
         return 'billing_item_id';
     }
+
+    
+
+    public function getProviderLabelAttribute(): string
+{
+    return match ($this->service?->service_type) {
+        'medication'         => 'Pharmacy',
+        'lab', 'imaging'     => 'Lab',
+        'surgery'            => 'Surgery',
+        default              => 'Misc',
+    };
+}
+
 }

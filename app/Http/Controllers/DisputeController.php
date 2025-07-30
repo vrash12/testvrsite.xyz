@@ -53,20 +53,21 @@ class DisputeController extends Controller
 
     public function store(Request $request)
     {
+        \Log::debug('⏳ DisputeController@store start', $request->all());
+    
         $request->validate([
             'bill_item_id' => 'required|exists:bill_items,billing_item_id',
             'reason'       => 'required|string|max:2000',
         ]);
-
+    
         $billItem = BillItem::with('bill.patient')->findOrFail($request->bill_item_id);
-
-        // Ensure the authenticated patient owns the bill item
+    
         abort_unless(
             $billItem->bill->patient_id === auth()->user()->patient_id,
             403,
             'You may dispute only your own charges.'
         );
-
+    
         $dispute = Dispute::create([
             'billing_item_id' => $billItem->billing_item_id,
             'patient_id'      => $billItem->bill->patient_id,
@@ -74,13 +75,18 @@ class DisputeController extends Controller
             'reason'          => $request->reason,
             'status'          => 'pending',
         ]);
-
-        /* Notify all billing users */
-        $billingUsers = User::where('role', 'billing')->get();
+    
+        \Log::debug('✅ Dispute created', ['dispute_id' => $dispute->dispute_id]);
+    
+        // notify billing…
+        $billingUsers = User::where('role','billing')->get();
         Notification::send($billingUsers, new DisputeFiled($dispute));
-
-        return back()->with('success', 'Dispute submitted. Billing staff will review it shortly.');
+    
+        return redirect()
+            ->route('patient.disputes.mine')
+            ->with('success', 'Your dispute has been filed! We’ll let you know when billing reviews it.');
     }
+    
 
     
 

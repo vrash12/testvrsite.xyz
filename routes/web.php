@@ -20,7 +20,8 @@ use App\Http\Controllers\SuppliesController;
 use App\Http\Controllers\PatientDashboardController;
 use App\Http\Controllers\Pharmacy\ChargeController as PharmacyChargeController;
 use App\Http\Controllers\Billing\ChargeController   as BillingChargeController;
-
+use App\Http\Controllers\OperatingRoomController;
+use App\Http\Controllers\Billing\DischargeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PatientBillingController;
 use App\Http\Controllers\PatientDisputeController;
@@ -31,25 +32,64 @@ use App\Http\Controllers\LabController;
 use App\Http\Controllers\HospitalServiceController;
 
 
+Route::middleware(['auth'])
+     ->prefix('pharmacy')->name('pharmacy.')
+     ->group(function () {
+         Route::get('dashboard', [PharmacyController::class, 'index'])
+              ->name('dashboard');
+         Route::resource('medicines', MedicineController::class);
 
+         // ← dispense route must NOT repeat the 'pharmacy/' prefix
+         Route::patch(
+             'charges/{charge}/dispense',
+             [App\Http\Controllers\PharmacyController::class,'dispense']
+         )->name('charges.dispense');
+
+         Route::resource('charges', PharmacyChargeController::class);
+     });
+
+
+
+Route::middleware(['auth','role:operating_room'])
+     ->prefix('operating')
+     ->name('operating.')
+     ->group(function () {
+         Route::get('dashboard',    [OperatingRoomController::class, 'dashboard'])->name('dashboard');
+         Route::get('queue',        [OperatingRoomController::class, 'queue'])    ->name('queue');
+         Route::get('create',       [OperatingRoomController::class, 'create'])   ->name('create');
+         Route::post('store',       [OperatingRoomController::class, 'store'])    ->name('store');
+         Route::get('{assignment}', [OperatingRoomController::class, 'show'])     ->name('details');
+         Route::post('{assignment}/complete', [OperatingRoomController::class, 'markCompleted'])
+                                                             ->name('complete');
+ });
+
+Route::post('notifications/mark-all-read', [PatientNotificationController::class, 'markAllRead'])
+     ->name('notifications.markAllRead')
+     ->middleware('auth');
 
      Route::middleware(['auth','role:billing'])
      ->prefix('billing')
      ->name('billing.')
      ->group(function () {
-    // 1) Dashboard (“Home” for billing users)
+    // 1) Dashboard ("Home" for billing users)
     Route::get('dashboard', [BillingDashboardController::class, 'index'])
          ->name('dashboard');
 
     // 2) Patient Bills / Manual Charges list
     Route::get('main', [PatientBillingController::class, 'index'])
          ->name('main');
+         Route::get(
+          '/my-billing/charge/{billItem}/dispute',
+          [PatientBillingController::class,'disputeRequest']
+       )->name('patient.dispute.form');
+       
 
     // 3) Notifications
     Route::get ('notifications',               [NotificationController::class, 'index'])
          ->name('notifications');
-    Route::post('notifications/mark-all-read', [NotificationController::class, 'markAllRead'])
-         ->name('notifications.markAllRead');
+   Route::post('notifications/mark-all-read', [PatientNotificationController::class,'markAllRead'])
+     ->name('notifications.markAllRead');
+
 
     // 4) Dispute queue & detail
     Route::get('dispute/queue',     [DisputeController::class, 'queue'])
@@ -80,9 +120,22 @@ use App\Http\Controllers\HospitalServiceController;
          Route::get('patient/billing/charge-trace/{billItem}', 
     [PatientBillingController::class, 'chargeTrace'])
     ->name('patient.billing.chargeTrace');
+   /* Patient discharge dashboard */
+    Route::get ('/discharge',             [DischargeController::class,'index'])
+         ->name('billing.discharge.index');
+  Route::post('discharge/{patient}/settle',
+                      [DischargeController::class,'settle'])
+                ->name('discharge.settle');
 
+        Route::get('discharge', [\App\Http\Controllers\Billing\DischargeController::class, 'index'])
+         ->name('discharge.index');
+     Route::post('discharge/{patient}/finish', [DischargeController::class, 'finish'])
+              ->name('discharge.finish');
+    // actually mark one patient finished
+    Route::post('discharge/{patient}', [\App\Http\Controllers\Billing\DischargeController::class, 'store'])
+         ->name('discharge.store');
          
-});
+});  
 
 Route::prefix('patient')
      ->name('patient.')
@@ -94,7 +147,7 @@ Route::prefix('patient')
           Route::patch('account',          [ProfileController::class,'update'])         ->name('account.update');
           Route::patch('account/password', [ProfileController::class,'updatePassword']) ->name('account.password');
     Route::get ('billing',          [PatientBillingController::class,'index'])->name('billing');
-Route::get ('billing/{bill}',   [PatientBillingController::class,'show'])->name('billing.show');   // “Details”
+Route::get ('billing/{bill}',   [PatientBillingController::class,'show'])->name('billing.show');   // "Details"
     Route::get('billing/statement/pdf', [PatientBillingController::class,'downloadStatement'])
          ->name('billing.statement');
 Route::get(
@@ -102,18 +155,21 @@ Route::get(
     [PatientBillingController::class, 'chargeTrace']
 )->name('billing.chargeTrace');
 
-     
-  Route::post('/disputes',        [DisputeController::class, 'store'])->name('disputes.store');
-    Route::get('/my-disputes',      [DisputeController::class, 'myDisputes'])->name('disputes.mine');
+Route::post('disputes', [DisputeController::class,'store'])
+              ->name('disputes.store');
+ Route::get('disputes', [DisputeController::class,'myDisputes'])
+              ->name('disputes.mine');
   Route::get('notifications', [PatientNotificationController::class, 'index'])->name('notification');  
   Route::patch('notifications/{notification}', [PatientNotificationController::class, 'update'])
               ->name('notifications.update');
-     });
+
    Route::prefix('items')->name('items.')->group(function () {
         Route::post('/',            [HospitalServiceController::class, 'store' ])->name('store');
         Route::put('{service}',     [HospitalServiceController::class, 'update'])->name('update');
         Route::delete('{service}',  [HospitalServiceController::class, 'destroy'])->name('destroy');
     });
+     }); // FIXED: Added missing closing brace for patient route group
+
 Route::prefix('laboratory')->name('laboratory.')
      ->middleware('auth')
      ->group(function () {
@@ -227,14 +283,7 @@ Route::middleware(['auth'])
               ->only(['index','create','store','show']);
      });
 
-Route::middleware(['auth'])
-     ->prefix('pharmacy')->name('pharmacy.')
-     ->group(function () {
-         Route::get('dashboard', [PharmacyController::class, 'index'])->name('dashboard');
-         Route::resource('medicines', MedicineController::class);
-         Route::get('charges/{charge}', [ChargeController::class, 'show'])->name('charges.show');  // Manually define the show route
-         Route::resource('charges', ChargeController::class); // Make sure to leave this as-is
-     });
+
 
 Route::middleware(['auth'])
       ->prefix('admin')->name('admin.')
@@ -284,4 +333,3 @@ Route::prefix('doctor')
                  Route::get('/orders',                    [DoctorController::class,'ordersIndex'])->name('orders.index');
         Route::get('/patient-orders/{patient}',  [DoctorController::class,'patientOrders'])->name('orders.show');
      });
-     

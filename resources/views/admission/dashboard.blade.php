@@ -1,3 +1,4 @@
+{{-- resources/views/admission/dashboard.blade.php --}}
 @extends('layouts.admission')
 
 @section('content')
@@ -57,18 +58,28 @@
           @forelse($recentAdmissions as $adm)
             <tr>
               <td>{{ $adm->admission_date->format('Y-m-d') }}</td>
-              <td>{{ $adm->patient->patient_id }}</td>
-              <td>{{ $adm->patient->patient_first_name }} {{ $adm->patient->patient_last_name }}</td>
-              <td>{{ $adm->room_number }}</td>
-              <td>{{ $adm->doctor->doctor_name }}</td>
-           <td>{{ $adm->patient->medicalDetail->primary_reason ?? '—' }}</td>
-
+              <td>{{ optional($adm->patient)->patient_id ?? '–' }}</td>
+              <td>{{ optional($adm->patient)->patient_first_name }} {{ optional($adm->patient)->patient_last_name }}</td>
               <td>
-                <a href="{{ route('admission.patients.show',$adm->patient) }}"
-                   class="btn btn-sm btn-outline-secondary">
-                  <i class="fas fa-file-alt"></i> Details
-                </a>
-              </td>
+  {{ optional($adm->room)->room_number ?? '–' }}
+</td>
+
+              <td>{{ $adm->doctor->doctor_name }}</td>
+              <td>
+  {{ optional(optional($adm->patient)->medicalDetail)->primary_reason ?? '—' }}
+</td>
+
+<td>
+  @if($adm->patient)
+    <a href="{{ route('admission.patients.show', $adm->patient) }}"
+       class="btn btn-sm btn-outline-secondary">
+      <i class="fas fa-file-alt"></i> Details
+    </a>
+  @else
+    &mdash;
+  @endif
+</td>
+
             </tr>
           @empty
             <tr><td colspan="7" class="text-center">No recent admissions.</td></tr>

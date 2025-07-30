@@ -67,11 +67,11 @@
   <td>{{ $misc->created_at->format('Y-m-d') }}</td>
   <td>{{ $misc->patient->patient_id }}</td>
   <td>{{ $misc->patient->patient_first_name }} {{ $misc->patient->patient_last_name }}</td>
-  <td>{{ $misc->service->service_name }}</td>
+  <td>{{ optional($misc->service)->service_name ?? '—' }}</td>
   <td>{{ $misc->quantity }}</td>
   <td>
-    {{ optional(optional($misc->patient->admissionDetail)->doctor)->doctor_name ?? '—' }}
-  </td>
+  {{ optional($misc->creator)->username ?? '—' }}
+</td>
   <td>
     <span class="badge bg-{{ $misc->status==='pending'? 'warning text-dark':'success' }}">
       {{ ucfirst($misc->status) }}

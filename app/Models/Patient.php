@@ -36,6 +36,7 @@ class Patient extends Authenticatable
         'patient_first_name',
         'patient_last_name',
         'patient_birthday',
+              'middle_initial',
         'civil_status',
         'email',
         'sex',     
@@ -75,7 +76,10 @@ public function setPasswordAttribute($plain)
     {
         return $this->hasOne(BillingInformation::class, 'patient_id');
     }
-
+ public function deposits(): HasMany
+    {
+        return $this->hasMany(Deposit::class, 'patient_id', 'patient_id');
+    }
  public function dashboard()
 {
     // 1) Get the authenticated user’s Patient record

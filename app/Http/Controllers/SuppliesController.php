@@ -8,7 +8,10 @@ use App\Models\Patient;
 use Illuminate\Support\Facades\DB; 
 use App\Models\HospitalService;
 use App\Models\Department;
-
+use App\Models\BillItem;
+use App\Models\AuditLog;
+use App\Models\Bill;
+use App\Models\AdmissionDetail;
 
 class SuppliesController extends Controller
 {
@@ -69,42 +72,66 @@ class SuppliesController extends Controller
 
         return view('supplies.create', compact('patients','services'));
     }
-
-    /**
-     * POST /supplies
-     * Validate & store a new supply charge
-     */
- public function store(Request $request)
-{
-    $data = $request->validate([
-        'patient_id'             => 'required|exists:patients,patient_id',
-        'notes'                  => 'nullable|string',
-        'misc_item'              => 'required|array|min:1',
-        'misc_item.*.service_id' => 'required|exists:hospital_services,service_id',
-        'misc_item.*.quantity'   => 'required|integer|min:1',
-    ]);
-
-    foreach ($data['misc_item'] as $item) {
-        $service   = HospitalService::findOrFail($item['service_id']);
-        $unitPrice = $service->price;
-        $total     = $unitPrice * $item['quantity'];
-
-        MiscellaneousCharge::create([
-            'patient_id'   => $data['patient_id'],
-            'service_id'   => $item['service_id'],
-            'quantity'     => $item['quantity'],
-            'unit_price'   => $unitPrice,
-            'total'        => $total,
-            'status'       => 'pending',
-            'notes'        => $data['notes'] ?? null,
-            'created_by'   => Auth::id(),
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'patient_id'             => 'required|exists:patients,patient_id',
+            'notes'                  => 'nullable|string',
+            'misc_item'              => 'required|array|min:1',
+            'misc_item.*.service_id' => 'required|exists:hospital_services,service_id',
+            'misc_item.*.quantity'   => 'required|integer|min:1',
         ]);
+    
+        $userId = Auth::id();
+    
+        // 1) One Bill per day per patient
+        $bill = Bill::firstOrCreate(
+            ['patient_id'   => $data['patient_id'], 'billing_date' => now()->toDateString()],
+            ['payment_status'=> 'pending']
+        );
+    
+        foreach ($data['misc_item'] as $item) {
+            $service = HospitalService::findOrFail($item['service_id']);
+            $qty     = $item['quantity'];
+            $total   = $service->price * $qty;
+    
+            // 2) Create the BillItem
+            $billItem = BillItem::create([
+                'billing_id'   => $bill->billing_id,
+                'service_id'   => $service->service_id,
+                'quantity'     => $qty,
+                'amount'       => $total,
+                'billing_date' => $bill->billing_date,
+            ]);
+    
+            // 3) Queue the MiscellaneousCharge, linking to the BillItem
+            MiscellaneousCharge::create([
+                'patient_id' => $data['patient_id'],
+                'service_id' => $service->service_id,
+                'quantity'   => $qty,
+                'unit_price' => $service->price,
+                'total'      => $total,
+                'status'     => 'pending',
+                'notes'      => $data['notes'] ?? null,
+                'created_by' => $userId,
+            ]);
+    
+            // 4) Write the AuditLog
+            AuditLog::create([
+                'bill_item_id' => $billItem->billing_item_id,
+                'action'       => 'create',
+                'message'      => "Supply {$service->service_name} ×{$qty} (₱{$total}) added by ".Auth::user()->username,
+                'actor'        => Auth::user()->username,
+                'icon'         => 'fa-box',
+            ]);
+        }
+    
+        return redirect()
+            ->route('supplies.queue')
+            ->with('success', 'Supply charge(s) created.');
     }
-
-    return redirect()
-        ->route('supplies.queue')
-        ->with('success','Supply charge(s) created.');
-}
+    
+    
 
     public function queue()
     {

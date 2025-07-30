@@ -1,3 +1,4 @@
+{{-- resources/views/admin/resources/create.blade.php --}}
 @extends('layouts.admin')
 
 @section('content')
@@ -44,6 +45,15 @@
                    class="form-control @error('room_number') is-invalid @enderror"
                    placeholder="e.g. 101A" required>
             @error('room_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          </div>
+
+          <div class="mb-3">
+            <label for="capacity" class="form-label">Capacity (no. of beds)</label>
+            <input type="number" name="capacity" id="capacity"
+                   value="{{ old('capacity', 1) }}"
+                   min="1" class="form-control @error('capacity') is-invalid @enderror"
+                   required>
+            @error('capacity')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
           <div class="mb-3">
@@ -101,6 +111,16 @@
                    class="form-control @error('bed_number') is-invalid @enderror"
                    placeholder="e.g. Bed 1" required>
             @error('bed_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          </div>
+
+          <div class="mb-3">
+            <label for="rate" class="form-label">Daily Rate (₱)</label>
+            <input type="number" name="rate" id="rate"
+                   value="{{ old('rate', 0) }}"
+                   step="0.01" min="0"
+                   class="form-control @error('rate') is-invalid @enderror"
+                   required>
+            @error('rate')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
           <div class="mb-3">

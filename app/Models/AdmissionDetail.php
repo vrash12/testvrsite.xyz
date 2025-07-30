@@ -13,7 +13,7 @@ class AdmissionDetail extends Model
     protected $guarded    = [];
 
     protected $casts = [
-        'admission_date' => 'date',
+           'admission_date' => 'datetime',
         'created_at'     => 'datetime',
         'updated_at'     => 'datetime',
     ];
@@ -32,16 +32,16 @@ class AdmissionDetail extends Model
     {
         return $this->belongsTo(Doctor::class, 'doctor_id');
     }
-public function room()
+public function bed(): BelongsTo
 {
-    return $this->belongsTo(Room::class,'room_id');
+    return $this->belongsTo(Bed::class, 'bed_number', 'bed_number');
 }
 
-    /**
-     * (Optionally) if you also want to fetch the Bed by its number:
-     */
-    public function bed(): BelongsTo
-    {
-        return $this->belongsTo(Bed::class, 'bed_number', 'bed_number');
-    }
+/** 
+ * Join on the room_number string in admission_details → room_number in rooms 
+ */
+public function room(): BelongsTo
+{
+    return $this->belongsTo(Room::class, 'room_number', 'room_number');
+}
 }

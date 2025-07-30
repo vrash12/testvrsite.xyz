@@ -5,12 +5,12 @@
 <div class="container-fluid">
     <h3 class="fw-bold text-primary mb-1">Order Entry</h3>
     <p class="text-muted mb-4">Create prescriptions and order services for patients</p>
-@if($recentAdmissions->count())
+
+    @if($recentAdmissions->count())
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
             Recently admitted &mdash; {{ now()->format('M d') }}
         </div>
-
         <div class="card-body p-0">
             <table class="table mb-0">
                 <thead class="table-light">
@@ -37,13 +37,20 @@
             </table>
         </div>
     </div>
-@endif
+    @endif
 
     <div class="card mb-4">
         <div class="card-body">
             <form method="GET" class="row g-2 align-items-center">
                 <div class="col">
-                    <input type="text" name="q" class="form-control" placeholder="Search by Name or MRN" value="{{ $q }}">
+                <input
+  type="text"
+  name="q"
+  class="form-control"
+  placeholder="Search by Name or MRN"
+  value="{{ $q }}"
+>
+
                 </div>
                 <div class="col-auto">
                     <button class="btn btn-primary">Search</button>
@@ -64,18 +71,28 @@
         <tbody>
             @forelse($patients as $patient)
                 <tr>
-                    <td>{{ $patient->patient_first_name }} {{ $patient->patient_last_name }}</td>
+                    <td>
+                        {{ $patient->patient_first_name }}
+                        {{ $patient->patient_last_name }}
+                    </td>
                     <td>{{ $patient->sex ?? '—' }}</td>
-                    <td>{{ $patient->admissionDetail?->room?->room_number ?? '—' }}</td>
+                    <td>
+                        {{ $patient->admissionDetail?->room?->room_number ?? '—' }}
+                    </td>
                     <td class="text-center">
-                        <a href="{{ route('doctor.order', $patient) }}" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-file-alt me-1"></i>Details
+                        <a 
+                          href="{{ route('doctor.order', $patient) }}" 
+                          class="btn btn-outline-secondary btn-sm"
+                        >
+                            <i class="fas fa-file-alt me-1"></i> Details
                         </a>
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="4" class="text-center text-muted">No patients found.</td>
+                    <td colspan="4" class="text-center text-muted">
+                        No patients found.
+                    </td>
                 </tr>
             @endforelse
         </tbody>

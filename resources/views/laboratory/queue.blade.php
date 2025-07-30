@@ -67,10 +67,10 @@
                   <tbody>
   @forelse($labRequests as $request)
     <tr>
-      {{-- Date Assigned --}}
-      <td>
-        {{ optional($request->datetime)->format('M j, Y g:i A') ?? '–' }}
-      </td>
+    <td>
+  {{ $request->created_at->format('M j, Y g:i A') }}
+</td>
+
 
       {{-- Patient --}}
       <td>

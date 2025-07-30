@@ -7,6 +7,7 @@ use App\Models\Patient;
 use App\Models\HospitalService as Service;
 use App\Models\PharmacyCharge;
 use App\Models\PharmacyChargeItem;
+use App\Models\BillItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -17,41 +18,66 @@ class PharmacyController extends Controller
         $this->middleware(['auth','role:pharmacy']);
     }
 
-    /**
-     * GET /pharmacy
-     * Show dashboard with summary and recent charges.
-     */
- public function index(Request $request)
+
+public function index(Request $request)
 {
-    // Total medication charges
-    $totalCharges = PharmacyCharge::count();
+$totalCharges   = PharmacyCharge::completed()->count();
+$pendingCharges = PharmacyCharge::pending()->count();
+$patientsServed = PharmacyCharge::completed()->distinct('patient_id')->count('patient_id');
+    /* ───── Base query with search / filters ───── */
+    $query = PharmacyCharge::with('patient','items');
 
-    // Unique patients served
-    $patientsServed = PharmacyCharge::distinct('patient_id')->count('patient_id');
+    if ($q = $request->input('q')) {
+        $query->where(function($sub) use ($q) {
+            $sub->where('rx_number','like',"%$q%")
+                ->orWhereHas('patient', fn($p) =>
+                    $p->where(DB::raw("CONCAT(patient_first_name,' ',patient_last_name)"), 'like', "%$q%"));
+        });
+    }
 
-    // Pending charges (you can adjust the logic for “pending” however you like)
-    // Here we count those with no items yet, or total_amount == 0
-    $pendingCharges = PharmacyCharge::where('total_amount', 0)->count();
+    if ($from = $request->input('from')) {
+        $query->whereDate('created_at','>=',$from);
+    }
+    if ($to = $request->input('to')) {
+        $query->whereDate('created_at','<=',$to);
+    }
 
-    // Recent charges (for the table on dashboard)
-    $recentCharges = PharmacyCharge::with('patient', 'items')
-                        ->orderByDesc('created_at')
-                        ->take(5)
-                        ->get();
+    /* ───── Split into today / earlier ───── */
+    $todayCharges   = (clone $query)
+        ->whereDate('created_at', now()->toDateString())
+        ->orderByDesc('created_at')
+        ->get();
+
+    $earlierCharges = (clone $query)
+        ->whereDate('created_at','<', now()->toDateString())
+        ->orderByDesc('created_at')
+        ->take(10)          // show only 10 earlier for brevity
+        ->get();
 
     return view('pharmacy.dashboard', compact(
         'totalCharges',
         'patientsServed',
         'pendingCharges',
-        'recentCharges'
+        'todayCharges',
+        'earlierCharges'
     ));
 }
 
+public function dispense(PharmacyCharge $charge)
+{
+    if ($charge->status === 'completed') {
+        return back()->with('info','Already marked as dispensed.');
+    }
 
-    /**
-     * GET /pharmacy/create
-     * Show form to assign medication charge.
-     */
+    $charge->update([
+      'status'       => 'completed',
+      'dispensed_at' => now(),
+    ]);
+
+    return back()->with('success','Medication dispensed & flagged for billing.');
+}
+
+
     public function create()
     {
         // Active patients

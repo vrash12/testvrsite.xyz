@@ -3,15 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Doctor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class AdminUsersController extends Controller
 {
-   public function __construct()
-{
-    $this->middleware('auth');
-}
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
 
     public function index()
     {
@@ -19,19 +20,24 @@ class AdminUsersController extends Controller
         return view('admin.users.index', compact('users'));
     }
 
-  public function create()
-{
-    $roles = ['admin','patient','doctor','admission','billing','hospital_services','pharmacy'];
-
-    // load for dropdowns:
-    $departments = \App\Models\Department::orderBy('department_name')->get();
-    $rooms       = \App\Models\Room::where('status','available')->orderBy('room_number')->get();
-    $beds        = \App\Models\Bed::where('status','available')->orderBy('bed_number')->get();
-
-    return view('admin.users.create', compact(
-        'roles','departments','rooms','beds'
-    ));
-}
+    public function create()
+    {
+        $roles = [
+            'admin',
+            'admission',
+            'pharmacy',
+            'doctor',
+            'patient',
+            'laboratory',
+            'supplies',
+            'operating_room',
+            'billing',
+        ];
+        $departments = \App\Models\Department::orderBy('department_name')->get();
+        $rooms       = \App\Models\Room::where('status','available')->orderBy('room_number')->get();
+        $beds        = \App\Models\Bed::where('status','available')->orderBy('bed_number')->get();
+        return view('admin.users.create', compact('roles','departments','rooms','beds'));
+    }
 
     public function store(Request $request)
     {
@@ -40,13 +46,32 @@ class AdminUsersController extends Controller
             'email'    => 'required|email|unique:users,email',
             'role'     => 'required|in:admin,patient,doctor,admission,billing,hospital_services,pharmacy',
             'password' => 'required|string|min:8|confirmed',
+            'rate'     => 'required_if:role,doctor|nullable|numeric|min:0',
         ]);
 
         $data['password'] = Hash::make($data['password']);
-        User::create($data);
 
-        return redirect()->route('admin.users.index')
-                         ->with('success','User created successfully.');
+        $user = User::create([
+            'username'    => $data['username'],
+            'email'       => $data['email'],
+            'role'        => $data['role'],
+            'password'    => $data['password'],
+        ]);
+
+        if ($data['role'] === 'doctor') {
+            $doctor = Doctor::updateOrCreate(
+                ['user_id' => $user->user_id],
+                [
+                    'doctor_name'           => $data['username'],
+                    'doctor_specialization' => 'General',
+                    'department_id'         => 1,
+                    'rate'                  => $data['rate']
+                ]
+            );
+            $user->update(['doctor_id' => $doctor->doctor_id]);
+        }
+
+        return redirect()->route('admin.users.index')->with('success','User created successfully.');
     }
 
     public function edit(User $user)
@@ -55,37 +80,6 @@ class AdminUsersController extends Controller
         return view('admin.users.edit', compact('user','roles'));
     }
 
-    public function showAssignment(User $user)
-{
-    $departments = Department::all();
-    // pre-load rooms for the user’s current department, if any
-    $rooms = $user->department
-           ? $user->department->rooms()->where('status','available')->get()
-           : collect();
-    // pre-load beds for the user’s current room, if any
-    $beds  = $user->room
-           ? $user->room->beds()->where('status','available')->get()
-           : collect();
-
-    return view('admin.users.assign', compact('user','departments','rooms','beds'));
-}
-
-public function updateAssignment(Request $request, User $user)
-{
-    $data = $request->validate([
-      'department_id' => 'nullable|exists:departments,department_id',
-      'room_id'       => 'nullable|exists:rooms,room_id',
-      'bed_id'        => 'nullable|exists:beds,bed_id',
-    ]);
-
-    $user->update($data);
-
-    return redirect()
-        ->route('admin.users.index')
-        ->with('success','Assignments updated successfully.');
-}
-
-
     public function update(Request $request, User $user)
     {
         $data = $request->validate([
@@ -93,18 +87,38 @@ public function updateAssignment(Request $request, User $user)
             'email'    => 'required|email|unique:users,email,'.$user->user_id.',user_id',
             'role'     => 'required|in:admin,patient,doctor,admission,billing,hospital_services,pharmacy',
             'password' => 'nullable|string|min:8|confirmed',
+            'rate'     => 'required_if:role,doctor|nullable|numeric|min:0',
         ]);
 
-        if ($data['password']) {
+        if (!empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         } else {
             unset($data['password']);
         }
 
-        $user->update($data);
+        $user->update([
+            'username' => $data['username'],
+            'email'    => $data['email'],
+            'role'     => $data['role'],
+            'password' => $data['password'] ?? $user->password,
+        ]);
 
-        return redirect()->route('admin.users.index')
-                         ->with('success','User updated successfully.');
+        if ($data['role'] === 'doctor') {
+            $doctor = Doctor::updateOrCreate(
+                ['user_id' => $user->user_id],
+                [
+                    'doctor_name'           => $data['username'],
+                    'doctor_specialization' => 'General',
+                    'department_id'         => 1,
+                    'rate'                  => $data['rate']
+                ]
+            );
+            $user->update(['doctor_id' => $doctor->doctor_id]);
+        } else {
+            $user->update(['doctor_id' => null]);
+        }
+
+        return redirect()->route('admin.users.index')->with('success','User updated successfully.');
     }
 
     public function destroy(User $user)

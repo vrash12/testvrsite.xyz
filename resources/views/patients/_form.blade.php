@@ -1,7 +1,7 @@
 {{-- resources/views/patients/_form.blade.php --}}
 @php
   // ensure $patient is always defined
-  $patient = $patient ?? null;
+  $patient   = $patient ?? null;
   $admission = optional($patient)->admissionDetail;
   $medical   = optional($patient)->medicalDetail;
   $billing   = optional($patient)->billingInformation;
@@ -237,7 +237,7 @@
                     <input class="form-check-input" type="checkbox"
                            name="allergy_{{ $a }}" id="allergy_{{ $a }}"
                            {{ old("allergy_$a", $medical->{'allergies'}[$a] ?? false) ? 'checked' : '' }}>
-                    <label class="form-check-label" for="allergy_{{ $a }}">
+                    <label class="form-check-label" for="allergy_{{ $a }}">  
                       {{ $a==='none' ? 'No Known Allergies' : ucwords($a) }}
                     </label>
                   </div>
@@ -276,9 +276,11 @@
         <div class="row g-3">
           <div class="col-md-4">
             <label class="form-label">Admission Date <span class="text-danger">*</span></label>
-            <input type="date" name="admission_date"
-                   value="{{ old('admission_date', optional($admission)->admission_date?->format('Y-m-d')) }}"
-                   class="form-control @error('admission_date') is-invalid @enderror" required>
+      <input type="datetime-local"
+       class="form-control"
+       name="admission_date"
+       value="{{ old('admission_date', now()->format('Y-m-d\TH:i')) }}">
+
             @error('admission_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="col-md-4">
@@ -311,67 +313,61 @@
           </div>
           <div class="col-md-4">
             <label class="form-label">Attending Doctor <span class="text-danger">*</span></label>
-     <select id="doctor" name="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror" required>
-  <option value="">Choose department first…</option>
-  @foreach($doctors as $doc)
-    @php
-      $limit = 10;                                      // your max‐patients‐per‐day rule
-      $load  = $doc->today_load ?? $doc->todaysLoad();  // whatever you’re using
-      $full  = $load >= $limit;
-      $statusText = $full ? 'Unavailable' : 'Available';
-    @endphp
-    <option
-      value="{{ $doc->doctor_id }}"
-      {{ old('doctor_id', $admission->doctor_id ?? '') == $doc->doctor_id ? 'selected' : '' }}
-      {{ $full ? 'disabled' : '' }}
-    >
-      {{ $doc->doctor_name }} ({{ $statusText }})
-    </option>
-  @endforeach
-</select>
-
-
+            <select id="doctor" name="doctor_id"
+                    class="form-select @error('doctor_id') is-invalid @enderror" required>
+              <option value="">Choose department first…</option>
+              @foreach($doctors as $doc)
+                @php
+                  $limit = 10;
+                  $load  = $doc->today_load ?? $doc->todaysLoad();
+                  $full  = $load >= $limit;
+                  $statusText = $full ? 'Unavailable' : 'Available';
+                @endphp
+                <option value="{{ $doc->doctor_id }}"
+                        {{ old('doctor_id', $admission->doctor_id ?? '') == $doc->doctor_id ? 'selected' : '' }}
+                        {{ $full ? 'disabled' : '' }}>
+                  {{ $doc->doctor_name }} ({{ $statusText }})
+                </option>
+              @endforeach
+            </select>
             @error('doctor_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="col-md-4">
             <label class="form-label">Room <span class="text-danger">*</span></label>
-          <select id="room" name="room_id"
-        class="form-select @error('room_id') is-invalid @enderror" required>
-  <option value="">Choose department first…</option>
-  @foreach($rooms as $room)
-      @php
-        $occupied = $room->occupiedCount();
-        $full     = $room->isFull();
-      @endphp
-      <option value="{{ $room->room_id }}"
-              {{ old('room_id', $admission->room_id ?? '') == $room->room_id ? 'selected' : '' }}
-              {{ $full ? 'disabled' : '' }}>
-          {{ $room->room_number }} ({{ $occupied }}/{{ $room->capacity }})
-      </option>
-  @endforeach
-</select>
-
+            <select id="room" name="room_id"
+                    class="form-select @error('room_id') is-invalid @enderror" required>
+              <option value="">Choose department first…</option>
+              @foreach($rooms as $room)
+                @php
+                  $occupied = $room->occupiedCount();
+                  $full     = $room->isFull();
+                @endphp
+                <option value="{{ $room->room_id }}"
+                        {{ old('room_id', $admission->room_id ?? '') == $room->room_id ? 'selected' : '' }}
+                        {{ $full ? 'disabled' : '' }}>
+                  {{ $room->room_number }} ({{ $occupied }}/{{ $room->capacity }})
+                </option>
+              @endforeach
+            </select>
             @error('room_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="col-md-4">
             <label class="form-label">Bed</label>
-         <select id="bed" name="bed_id" class="form-select @error('bed_id') is-invalid @enderror">
-  <option value="">Choose room first…</option>
-  @foreach($beds as $bd)
-    @php
-      $occupied = $bd->isOccupied();
-      $text = $bd->bed_number . ' (' . ($occupied ? 'Occupied' : 'Free') . ')';
-    @endphp
-    <option
-      value="{{ $bd->bed_id }}"
-      {{ old('bed_id', $admission->bed_id ?? '') == $bd->bed_id ? 'selected' : '' }}
-      {{ $occupied ? 'disabled' : '' }}
-    >
-      {{ $text }}
-    </option>
-  @endforeach
-</select>
-
+            <select id="bed" name="bed_id"
+                    class="form-select @error('bed_id') is-invalid @enderror">
+              <option value="">Choose room first…</option>
+              @foreach($beds as $bd)
+                @php
+                  $occupied = $bd->isOccupied();
+                  $text     = $bd->bed_number . ' (' . ($occupied ? 'Occupied' : 'Free') . ')';
+                @endphp
+                <option value="{{ $bd->bed_id }}"
+                        {{ old('bed_id', $admission->bed_id ?? '') == $bd->bed_id ? 'selected' : '' }}
+                        {{ $occupied ? 'disabled' : '' }}>
+                  {{ $text }}
+                </option>
+              @endforeach
+            </select>
             @error('bed_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="col-12">
@@ -402,27 +398,35 @@
       <div class="card-header"><strong>Billing Details</strong></div>
       <div class="card-body">
         <div class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label">Insurance Provider</label>
-            <input type="text" name="insurance_provider"
-                   value="{{ old('insurance_provider', optional($billing)->insuranceProvider->name ?? '') }}"
-                   class="form-control @error('insurance_provider') is-invalid @enderror">
-            @error('insurance_provider')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          <div class="col-md-6">
+            <label class="form-label">Guarantor Name <span class="text-danger">*</span></label>
+            <input type="text" name="guarantor_name"
+                   value="{{ old('guarantor_name', optional($billing)->guarantor_name ?? '') }}"
+                   class="form-control @error('guarantor_name') is-invalid @enderror" required>
+            @error('guarantor_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
-          <div class="col-md-4">
-            <label class="form-label">Policy Number</label>
-            <input type="text" name="policy_number"
-                   value="{{ old('policy_number', $billing->policy_number ?? '') }}"
-                   class="form-control @error('policy_number') is-invalid @enderror">
-            @error('policy_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          <div class="col-md-6">
+            <label class="form-label">Relationship to Guarantor <span class="text-danger">*</span></label>
+            <input type="text" name="guarantor_relationship"
+                   value="{{ old('guarantor_relationship', optional($billing)->guarantor_relationship ?? '') }}"
+                   class="form-control @error('guarantor_relationship') is-invalid @enderror" required>
+            @error('guarantor_relationship')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="col-md-4">
             <label class="form-label">Initial Deposit (₱)</label>
             <input type="number" step="0.01" name="initial_deposit"
-                   value="{{ old('initial_deposit') }}"
+                   value="{{ old('initial_deposit', optional($billing)->initial_deposit ?? '') }}"
                    class="form-control @error('initial_deposit') is-invalid @enderror">
             @error('initial_deposit')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
+          <div class="col-md-4">
+  <label class="form-label">Doctor Fee (₱)</label>
+  <input type="text"
+         class="form-control"
+         value="₱{{ number_format(optional($admission)->doctor->rate ?? 0, 2) }}"
+         readonly>
+</div>
+
         </div>
       </div>
       <div class="card-footer">
@@ -430,61 +434,70 @@
                 data-current="billing" data-prev="admission">
           Previous
         </button>
-        {{-- submit lives in create/edit wrapper --}}
+        {{-- Final submit button should be in your parent create/edit template --}}
       </div>
     </div>
   </div>
 </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+  // dynamic fetch logic
   const deptSelect = document.getElementById('department');
   const docSelect  = document.getElementById('doctor');
   const roomSelect = document.getElementById('room');
   const bedSelect  = document.getElementById('bed');
 
-  // when department changes, fetch doctors + rooms
-  deptSelect.addEventListener('change', async () => {
+  deptSelect?.addEventListener('change', async () => {
     const depId = deptSelect.value;
     if (!depId) return;
-
-    // --- doctors ---
-    const doctors = await fetch(`/admission/departments/${depId}/doctors`)
-                          .then(r => r.json());
+    // fetch doctors
+    const doctors = await fetch(`/admission/departments/${depId}/doctors`).then(r => r.json());
     docSelect.innerHTML = `<option value="">Choose doctor…</option>`;
     doctors.forEach(d => {
-      docSelect.innerHTML += 
-        `<option value="${d.doctor_id}">${d.doctor_name}</option>`;
+      docSelect.innerHTML += `<option value="${d.doctor_id}">${d.doctor_name}</option>`;
     });
-
-    // --- rooms ---
-    const rooms = await fetch(`/admission/departments/${depId}/rooms`)
-                         .then(r => r.json());
+    // fetch rooms
+    const rooms = await fetch(`/admission/departments/${depId}/rooms`).then(r => r.json());
     roomSelect.innerHTML = `<option value="">Choose room…</option>`;
     rooms.forEach(rm => {
-      roomSelect.innerHTML += 
-        `<option value="${rm.room_id}">${rm.room_number}</option>`;
+      roomSelect.innerHTML += `<option value="${rm.room_id}">${rm.room_number}</option>`;
     });
-
-    // clear beds until a room is picked
+    // clear beds
     bedSelect.innerHTML = `<option value="">Choose room first…</option>`;
   });
 
-  // when room changes, fetch beds
-  roomSelect.addEventListener('change', async () => {
+  roomSelect?.addEventListener('change', async () => {
     const roomId = roomSelect.value;
     if (!roomId) return;
-    const beds = await fetch(`/admission/rooms/${roomId}/beds`)
-                         .then(r => r.json());
+    const beds = await fetch(`/admission/rooms/${roomId}/beds`).then(r => r.json());
     bedSelect.innerHTML = `<option value="">Choose bed…</option>`;
     beds.forEach(b => {
-      bedSelect.innerHTML += 
-        `<option value="${b.bed_id}">${b.bed_number}</option>`;
+      bedSelect.innerHTML += `<option value="${b.bed_id}">${b.bed_number}</option>`;
     });
   });
 
-  // on edit – if a department/room is already selected, fire those
-  if (deptSelect.value) deptSelect.dispatchEvent(new Event('change'));
-  if (roomSelect.value) roomSelect.dispatchEvent(new Event('change'));
+  // restore on edit
+  if (deptSelect?.value) deptSelect.dispatchEvent(new Event('change'));
+  if (roomSelect?.value) roomSelect.dispatchEvent(new Event('change'));
+
+  // step navigation
+  document.querySelectorAll('.step-next').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const current = btn.dataset.current;
+      const next    = btn.dataset.next;
+      document.getElementById(`${current}-tab`).classList.add('completed');
+      new bootstrap.Tab(document.getElementById(`${next}-tab`)).show();
+    });
+  });
+
+  document.querySelectorAll('.step-prev').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const current = btn.dataset.current;
+      const prev    = btn.dataset.prev;
+      document.getElementById(`${current}-tab`).classList.remove('completed');
+      new bootstrap.Tab(document.getElementById(`${prev}-tab`)).show();
+    });
+  });
 });
 </script>
-

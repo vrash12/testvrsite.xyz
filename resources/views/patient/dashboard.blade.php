@@ -7,7 +7,6 @@
     <p>Welcome to your patient portal! A hub for patients to access medical records and bills anytime, anywhere.</p>
 
     <div class="row">
-        {{-- Patient ID --}}
         <div class="col-md-3 mb-4">
             <div class="card">
                 <div class="card-body">
@@ -17,7 +16,6 @@
             </div>
         </div>
 
-        {{-- Room Number --}}
         <div class="col-md-3 mb-4">
             <div class="card">
                 <div class="card-body">
@@ -27,7 +25,6 @@
             </div>
         </div>
 
-        {{-- Latest Admit Date --}}
         <div class="col-md-3 mb-4">
             <div class="card">
                 <div class="card-body">
@@ -41,21 +38,43 @@
             </div>
         </div>
 
-        {{-- Amount Due --}}
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Amount Due</h5>
-                   <div class="fs-5 fw-bold">
-      ₱{{ number_format($amountDue, 2) }}
-    </div>
-                </div>
-            </div>
+    <div class="col-md-3 mb-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Amount Due</h5>
+
+          {{-- Services & Pharmacy --}}
+          <p class="mb-1">
+            <small class="text-muted">Services & Pharmacy:</small><br>
+            ₱{{ number_format($servicesSubtotal, 2) }}
+          </p>
+
+          {{-- Bed / Room --}}
+          <p class="mb-1">
+            <small class="text-muted">Bed / Room Rate:</small><br>
+            ₱{{ number_format($resourceRate, 2) }}
+          </p>
+
+          {{-- Doctor Fee --}}
+          <p class="mb-1">
+            <small class="text-muted">Doctor Fee:</small><br>
+            ₱{{ number_format($doctorRate, 2) }}
+          </p>
+
+          <hr class="my-2"/>
+
+          {{-- Grand Total --}}
+          <div class="fs-5 fw-bold">
+            ₱{{ number_format($amountDue, 2) }}
+          </div>
         </div>
+      </div>
+
+
+
     </div>
 
     <div class="row">
-        {{-- Prescriptions to Take --}}
         <div class="col-md-6 mb-4">
             <div class="card h-100">
                 <div class="card-body">
@@ -77,7 +96,6 @@
             </div>
         </div>
 
-        {{-- Today's Schedule --}}
         <div class="col-md-6 mb-4">
             <div class="card h-100">
                 <div class="card-body">
@@ -98,7 +116,6 @@
     </div>
 
     <div class="row">
-        {{-- Assigned Doctors --}}
         <div class="col-md-6 mb-4">
             <div class="card h-100">
                 <div class="card-body">
@@ -115,7 +132,6 @@
             </div>
         </div>
 
-        {{-- Pharmacy Charges --}}
         <div class="col-md-6 mb-4">
             <div class="card h-100">
                 <div class="card-body">
@@ -142,52 +158,51 @@
                 </div>
             </div>
         </div>
-        {{-- Scheduled / Completed Services --}}
-<div class="card mb-3 shadow-sm">
-  <div class="card-header bg-light fw-semibold">
-    Hospital Services <span class="badge bg-primary">{{ $serviceAssignments->count() }}</span>
-  </div>
 
-  <div class="card-body p-0">
-    @if($serviceAssignments->isEmpty())
-        <p class="text-muted p-3 mb-0">No services ordered yet.</p>
-    @else
-      <table class="table table-sm mb-0">
-        <thead>
-          <tr>
-            <th>Datetime</th>
-            <th>Service</th>
-            <th>Dept.</th>
-            <th class="text-end">Price</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          @foreach($serviceAssignments as $sa)
-            <tr>
-              <td>{{ \Carbon\Carbon::parse($sa->datetime)->format('M d, Y') }}</td>
-              <td>{{ $sa->service->service_name }}</td>
-              <td>{{ $sa->service->department->department_name ?? '—' }}</td>
-              <td class="text-end">{{ number_format($sa->service->price, 2) }}</td>
-              <td><span class="badge bg-{{ $sa->service_status === 'confirmed' ? 'success' : 'secondary' }}">
-                    {{ ucfirst($sa->service_status) }}
-                  </span>
-              </td>
-            </tr>
-          @endforeach
-        </tbody>
-        <tfoot>
-          <tr class="fw-semibold">
-            <td colspan="3" class="text-end">Total</td>
-            <td class="text-end">{{ number_format($servicesTotal, 2) }}</td>
-            <td></ td>
-          </tr>
-        </tfoot>
-      </table>
-    @endif
-  </div>
-</div>
-
+        <div class="card mb-3 shadow-sm">
+          <div class="card-header bg-light fw-semibold">
+            Hospital Services <span class="badge bg-primary">{{ $serviceAssignments->count() }}</span>
+          </div>
+          <div class="card-body p-0">
+            @if($serviceAssignments->isEmpty())
+                <p class="text-muted p-3 mb-0">No services ordered yet.</p>
+            @else
+              <table class="table table-sm mb-0">
+                <thead>
+                  <tr>
+                    <th>Datetime</th>
+                    <th>Service</th>
+                    <th>Dept.</th>
+                    <th class="text-end">Price</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @foreach($serviceAssignments as $sa)
+                    <tr>
+                      <td>{{ \Carbon\Carbon::parse($sa->datetime)->format('M d, Y') }}</td>
+                      <td>{{ $sa->service->service_name }}</td>
+                      <td>{{ $sa->service->department->department_name ?? '—' }}</td>
+                      <td class="text-end">{{ number_format($sa->service->price, 2) }}</td>
+                      <td>
+                        <span class="badge bg-{{ $sa->service_status === 'confirmed' ? 'success' : 'secondary' }}">
+                          {{ ucfirst($sa->service_status) }}
+                        </span>
+                      </td>
+                    </tr>
+                  @endforeach
+                </tbody>
+                <tfoot>
+                  <tr class="fw-semibold">
+                    <td colspan="3" class="text-end">Total</td>
+                    <td class="text-end">{{ number_format($servicesTotal, 2) }}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            @endif
+          </div>
+        </div>
     </div>
 </div>
 @endsection

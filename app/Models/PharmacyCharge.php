@@ -8,26 +8,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PharmacyCharge extends Model
 {
-    protected $table      = 'pharmacy_charges';
-    protected $primaryKey = 'id';
-    protected $guarded    = [];
-
-    protected $casts = [
-        'date' => 'datetime',
+    protected $fillable = [
+        'patient_id','prescribing_doctor','rx_number','notes',
+        'total_amount','status','dispensed_at',
     ];
 
-    public function patient(): BelongsTo
-    {
-        return $this->belongsTo(Patient::class, 'patient_id');
-    }
+    protected $casts = ['dispensed_at' => 'datetime'];
 
-   public function items()
-{
-    return $this->hasMany(PharmacyChargeItem::class, 'charge_id');
-}
+    /* scopes */
+    public function scopePending($q)   { return $q->where('status','pending'); }
+    public function scopeCompleted($q) { return $q->where('status','completed'); }
 
-public function getTotalAmountAttribute()
-{
-    return $this->items->sum('amount');
-}
+    public function items()  { return $this->hasMany(PharmacyChargeItem::class,'charge_id'); }
+    public function patient(){ return $this->belongsTo(Patient::class,'patient_id'); }
 }

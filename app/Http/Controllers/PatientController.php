@@ -35,79 +35,100 @@ class PatientController extends Controller
     $this->middleware('auth');
 }
 
-
-  public function dashboard()
+public function dashboard()
     {
         $user      = Auth::user();
         $patientId = $user->patient_id;
 
-        // 1) Latest admission
-        $admission = AdmissionDetail::where('patient_id', $patientId)
-                        ->latest('admission_date')
-                        ->first();
-
-        // 2) Amount due
-        $billing   = BillingInformation::where('patient_id', $patientId)->first();
-        $amountDue = $billing
-                    ? ($billing->total_charges - $billing->payments_made)
-                    : 0;
-
-        // 3) Prescriptions to take (for the tile)
-        $prescriptions = PrescriptionItem::whereHas('prescription', function($q) use ($patientId) {
-                                $q->where('patient_id', $patientId);
-                            })
-                            ->with('service')
-                            ->where('status', 'pending')
-                            ->orderByDesc('datetime')
-                            ->get();
-
-        // 4) Today’s schedule
-        $todaySchedule = ServiceAssignment::with('service.department')
+        // 1️⃣ Latest admission (with bed / room / doctor)
+        $admission = AdmissionDetail::with(['room','bed','doctor'])
             ->where('patient_id', $patientId)
-            ->whereDate('datetime', Carbon::today())
-            ->where('service_status', 'confirmed')
+            ->latest('admission_date')
+            ->first();
+
+        // 2️⃣ Base billing (charges minus payments)
+        $billing  = BillingInformation::where('patient_id', $patientId)->first();
+        $baseDue  = $billing
+                  ? ($billing->total_charges - $billing->payments_made)
+                  : 0;
+ $labTotal = ServiceAssignment::where('patient_id', $patientId)
+        ->whereHas('service', fn($q) => $q->where('service_type','lab'))
+        ->sum('amount');
+
+            // Service (OR/Consult) subtotal
+    $serviceTotal = ServiceAssignment::where('patient_id', $patientId)
+    ->whereHas('service', fn($q) => $q->where('service_type','service'))
+    ->sum('amount');
+        // 3️⃣ Pharmacy subtotal (pending Rx’s × their price)
+        $pharmacyTotal = PrescriptionItem::whereHas('prescription', fn($q) =>
+                $q->where('patient_id',$patientId)
+            )
+            ->with('service')
+            ->get()
+            ->sum(fn($item) => $item->quantity_asked * $item->service->price);
+
+            $servicesSubtotal = $baseDue + $pharmacyTotal + $labTotal + $serviceTotal;
+        // 5️⃣ Resource rates
+        $resourceRate = optional($admission?->bed)->rate
+                      ?? optional($admission?->room)->rate
+                      ?? 0;
+        $doctorRate   = optional($admission?->doctor)->rate ?? 0;
+
+        // 6️⃣ Grand total
+        $amountDue = $servicesSubtotal + $resourceRate + $doctorRate;
+
+        // 7️⃣ Prescriptions to take
+        $prescriptions = PrescriptionItem::whereHas('prescription', fn($q) =>
+                $q->where('patient_id',$patientId)
+            )
+            ->with('service')
+            ->where('status','pending')
+            ->orderByDesc('datetime')
             ->get();
 
-        // 5) Assigned doctors (attending + any today)
-        $assignedDoctors = collect([ optional($admission)->doctor ])
+        // 8️⃣ Today’s confirmed schedule
+        $todaySchedule = ServiceAssignment::with('service.department')
+            ->where('patient_id',$patientId)
+            ->whereDate('datetime', Carbon::today())
+            ->where('service_status','confirmed')
+            ->get();
+
+        // 9️⃣ Assigned doctors
+        $assignedDoctors = collect([$admission?->doctor])
             ->merge($todaySchedule->pluck('doctor'))
             ->filter()
             ->unique('doctor_id');
 
-        // 6) Pharmacy “Charges” derived from prescription items
-        $pharmacyCharges = PrescriptionItem::whereHas('prescription', function($q) use ($patientId) {
-                                    $q->where('patient_id', $patientId);
-                                })
-                                ->with('service')
-                                ->orderByDesc('datetime')
-                                ->get();
+        //  🔟 Service assignments list
+        $serviceAssignments = ServiceAssignment::with(['service.department','doctor'])
+            ->where('patient_id',$patientId)
+            ->orderByDesc('datetime')
+            ->get();
 
-        $pharmacyTotal = $pharmacyCharges
-            ->sum(fn($item) => $item->quantity_asked * $item->service->price);
-            
-              $serviceAssignments = ServiceAssignment::with(['service.department','doctor'])
-        ->where('patient_id', $patientId)
-        ->orderByDesc('datetime')
-        ->get();
+        $servicesTotal = $serviceAssignments
+            ->sum(fn($sa) => $sa->service->price);
 
-    /* 8) Compute the running total based on HospitalService.price */
-    $servicesTotal = $serviceAssignments
-        ->sum(fn ($sa) => $sa->service->price);
-        return view('patient.dashboard', compact(
-        'user',
-        'admission',
-        'amountDue',
-        'prescriptions',
-        'todaySchedule',
-        'assignedDoctors',
-        'pharmacyCharges',
-        'pharmacyTotal',
-        // ⬇ NEW
-        'serviceAssignments',
-        'servicesTotal'
-    ));
+        return view('patient.dashboard', [
+            'user'              => $user,
+            'admission'         => $admission,
+            'baseDue'           => $baseDue,
+            'pharmacyTotal'     => $pharmacyTotal,
+            'servicesSubtotal'  => $servicesSubtotal,
+            'labTotal'          => $labTotal,    
+            'resourceRate'      => $resourceRate,
+            'serviceTotal'     => $serviceTotal,
+            'doctorRate'        => $doctorRate,
+            'amountDue'         => $amountDue,
+            'prescriptions'     => $prescriptions,
+            'todaySchedule'     => $todaySchedule,
+            'assignedDoctors'   => $assignedDoctors,
+            'pharmacyCharges'   => $prescriptions,
+            'pharmacyTotal'     => $pharmacyTotal,
+            'serviceAssignments'=> $serviceAssignments,
+            'servicesTotal'     => $servicesTotal,
+        ]);
     }
-
+    
 public function edit(Patient $patient)
 {
     $departments = Department::all();
@@ -144,60 +165,46 @@ public function edit(Patient $patient)
 }
 public function store(Request $request)
 {
-    // 1. Validate all input
     $data = $request->validate([
-        // Personal
-        'patient_first_name' => 'required|string|max:100',
-        'patient_last_name'  => 'required|string|max:100',
-        'patient_birthday'   => 'nullable|date',
-        'civil_status'       => 'nullable|string|max:50',
-        'phone_number'       => 'nullable|string|max:20',
-        'address'            => 'nullable|string',
-'sex'                => 'required|in:Male,Female',
-        // Medical
-        'primary_reason'     => 'nullable|string',
-        'weight'             => 'nullable|numeric',
-        'height'             => 'nullable|numeric',
-        'temperature'        => 'nullable|numeric',
-        'blood_pressure'     => 'nullable|string',
-        'heart_rate'         => 'nullable|integer',
-        'history_others'     => 'nullable|string',
-        'allergy_others'     => 'nullable|string',
-
-        // Admission
-        'admission_date'   => 'required|date',
-        'admission_type'   => 'required|string|max:50',
-        'admission_source' => 'nullable|string|max:100',
-        'department_id'    => 'required|exists:departments,department_id',
-        'doctor_id'        => 'required|exists:doctors,doctor_id',
-        'room_id'          => 'required|exists:rooms,room_id',
-        'bed_id'           => 'nullable|exists:beds,bed_id',
-        'admission_notes'  => 'nullable|string',
-
-        // Billing
-        'insurance_provider' => 'nullable|string|max:100',
-        'policy_number'      => 'nullable|string|max:100',
-        'initial_deposit'    => 'nullable|numeric|min:0',
+        'patient_first_name'    => 'required|string|max:100',
+        'patient_last_name'     => 'required|string|max:100',
+        'patient_birthday'      => 'nullable|date',
+        'civil_status'          => 'nullable|string|max:50',
+        'phone_number'          => 'nullable|string|max:20',
+        'address'               => 'nullable|string',
+        'sex'                   => 'required|in:Male,Female',
+        'primary_reason'        => 'nullable|string',
+        'weight'                => 'nullable|numeric',
+        'height'                => 'nullable|numeric',
+        'temperature'           => 'nullable|numeric',
+        'blood_pressure'        => 'nullable|string',
+        'heart_rate'            => 'nullable|integer',
+        'history_others'        => 'nullable|string',
+        'allergy_others'        => 'nullable|string',
+        'admission_date'        => 'required|date',
+        'admission_type'        => 'required|string|max:50',
+        'admission_source'      => 'nullable|string|max:100',
+        'department_id'         => 'required|exists:departments,department_id',
+        'doctor_id'             => 'required|exists:doctors,doctor_id',
+        'room_id'               => 'required|exists:rooms,room_id',
+        'bed_id'                => 'nullable|exists:beds,bed_id',
+        'admission_notes'       => 'nullable|string',
+        'guarantor_name'        => 'required|string|max:100',
+        'guarantor_relationship'=> 'required|string|max:50',
+        'initial_deposit'       => 'nullable|numeric|min:0',
     ]);
 
-    // 2. Generate unique email & default password
     $base = strtolower(substr($data['patient_first_name'],0,1) . substr($data['patient_last_name'],0,1));
-    $latest = Patient::where('email','like',"$base.%@patientcare.com")
-                     ->orderByDesc('email')
-                     ->first();
-    $seq = ($latest && preg_match('/\.(\d{3})@/',$latest->email,$m))
-         ? intval($m[1]) + 1
-         : 1;
+    $latest = Patient::where('email','like',"$base.%@patientcare.com")->orderByDesc('email')->first();
+    $seq = ($latest && preg_match('/\.(\d{3})@/',$latest->email,$m)) ? intval($m[1]) + 1 : 1;
     $generatedEmail = "{$base}." . str_pad($seq,3,'0',STR_PAD_LEFT) . "@patientcare.com";
-    $plainPassword  = 'password'; // will be hashed by Patient::setPasswordAttribute
+    $plainPassword = 'password';
 
-    // 3. Wrap in DB transaction
     $patient = DB::transaction(function() use ($data, $generatedEmail, $plainPassword, $request) {
-        // 3.1 Create Patient
         $p = Patient::create([
             'patient_first_name' => $data['patient_first_name'],
             'patient_last_name'  => $data['patient_last_name'],
-             'sex'                => $data['sex'],    
+            'sex'                => $data['sex'],
             'patient_birthday'   => $data['patient_birthday'],
             'civil_status'       => $data['civil_status'],
             'email'              => $generatedEmail,
@@ -207,7 +214,6 @@ public function store(Request $request)
             'status'             => 'active',
         ]);
 
-        // 3.2 Medical Details
         $p->medicalDetail()->create([
             'primary_reason'  => $data['primary_reason'],
             'weight'          => $data['weight'],
@@ -235,102 +241,99 @@ public function store(Request $request)
             ]),
         ]);
 
-        // 3.3 Admission Details (capture for billing link)
         $room = Room::findOrFail($data['room_id']);
         $bed  = $data['bed_id'] ? Bed::findOrFail($data['bed_id']) : null;
         $admission = $p->admissionDetail()->create([
-            'admission_date'   => $data['admission_date'],
-            'admission_type'   => $data['admission_type'],
-            'admission_source' => $data['admission_source'] ?? '',
-            'department_id'    => $data['department_id'],
-            'doctor_id'        => $data['doctor_id'],
-            'room_number'      => $room->room_number,
-            'bed_number'       => $bed ? $bed->bed_number : '',
-            'admission_notes'  => $data['admission_notes'],
+'admission_date'  => now(), 
+
+            'admission_type'  => $data['admission_type'],
+            'admission_source'=> $data['admission_source'] ?? '',
+            'department_id'   => $data['department_id'],
+            'doctor_id'       => $data['doctor_id'],
+            'room_number'     => $room->room_number,
+            'bed_number'      => $bed ? $bed->bed_number : '',
+            'admission_notes' => $data['admission_notes'],
         ]);
 
         if ($data['bed_id']) {
-    Bed::where('bed_id', $data['bed_id'])
-       ->update([
-         'patient_id' => $p->patient_id,
-         'status'     => 'occupied',
-       ]);
-}
+            Bed::where('bed_id', $data['bed_id'])->update([
+                'patient_id' => $p->patient_id,
+                'status'     => 'occupied',
+            ]);
+        }
 
-
-        // 3.4 Billing Information
-        $insuranceProviderId = $data['insurance_provider']
-            ? InsuranceProvider::firstOrCreate(['name'=>$data['insurance_provider']])
-                ->insurance_provider_id
-            : null;
         $p->billingInformation()->create([
-            'payment_method_id'     => 1,
-            'insurance_provider_id' => $insuranceProviderId,
-            'policy_number'         => $data['policy_number'],
-            'payment_status'        => 'pending',
+            'payment_method_id'      => 1,
+            'guarantor_name'         => $data['guarantor_name'],
+            'guarantor_relationship' => $data['guarantor_relationship'],
+            'payment_status'         => 'pending',
         ]);
 
-        // 3.5 Initial Deposit → link to admission_id
         if (! empty($data['initial_deposit'])) {
             $bill = $p->bills()->create([
                 'billing_date'   => now(),
                 'payment_status' => 'partial',
                 'admission_id'   => $admission->admission_id,
             ]);
-            $bill->items()->create([
+
+            $billItem = $bill->items()->create([
                 'amount'          => $data['initial_deposit'],
                 'billing_date'    => now(),
                 'discount_amount' => 0,
             ]);
+
+            $p->user->notify(new AdmissionCharged(
+                optional($bed)->rate ?? 0,
+                $room->rate,
+                optional(Doctor::find($data['doctor_id']))->rate ?? 0,
+                $billItem->billing_item_id
+            ));
         }
 
-      $p->user()->create([
-    'username'      => Str::before($generatedEmail,'@'),
-    'email'         => $generatedEmail,
-    'password'      => $plainPassword,
-    'role'          => 'patient',
-    'department_id' => $data['department_id'],
-    'room_id'       => $data['room_id'],
-    'bed_id'        => $data['bed_id'] ?? null,
-    'doctor_id'     => $data['doctor_id'],   // ← link the attending doctor
-]);
+        $p->user()->create([
+            'username'      => Str::before($generatedEmail,'@'),
+            'email'         => $generatedEmail,
+            'password'      => $plainPassword,
+            'role'          => 'patient',
+            'department_id' => $data['department_id'],
+            'room_id'       => $data['room_id'],
+            'bed_id'        => $data['bed_id'] ?? null,
+            'doctor_id'     => $data['doctor_id'],
+        ]);
 
         return $p;
     });
 
-   return redirect()
-    ->route('admission.patients.show', $patient->patient_id)
-    ->with([
-        'generatedEmail' => $generatedEmail,
-        'plainPassword'  => $plainPassword,
-        'success'        => 'Patient admitted successfully.',
-    ]);
-
+    return redirect()
+        ->route('admission.patients.show', $patient->patient_id)
+        ->with([
+            'generatedEmail' => $generatedEmail,
+            'plainPassword'  => $plainPassword,
+            'success'        => 'Patient admitted successfully.',
+        ]);
 }
 
-    public function index(Request $request)
+
+public function index(Request $request)
 {
-    // start a query builder
     $query = Patient::query();
 
-    // full-text search on MRN or name
-    if ($search = $request->input('search')) {
-        $query->where(function($q) use($search) {
+    // ← changed from input('search') to input('q')
+    if ($search = $request->input('q')) {
+        $query->where(function($q) use ($search) {
             $q->where('patient_id', 'like', "%{$search}%")
               ->orWhere('patient_first_name', 'like', "%{$search}%")
               ->orWhere('patient_last_name',  'like', "%{$search}%");
         });
     }
 
-    
-
-    // simple status filter
+    // status filter (if you ever add one)
     if ($status = $request->input('status')) {
         $query->where('status', $status);
     }
 
- $patients = $query
-        ->with('admissionDetail.doctor')    // ← eager-load
+    $patients = $query
+        ->with('admissionDetail.doctor')
         ->orderBy('patient_last_name')
         ->paginate(15)
         ->withQueryString();
@@ -395,19 +398,19 @@ public function create()
             ->get();
     }
 
-    $insuranceProviders = InsuranceProvider::pluck('name','insurance_provider_id');
+
     $paymentMethods     = PaymentMethod::pluck('name','payment_method_id');
 
     return view('patients.create', compact(
         'departments','doctors','rooms','beds',
-        'insuranceProviders','paymentMethods'
+     'paymentMethods'
     ));
 }
 
-
-
-    public function show(Patient $patient)
+public function show($patient_id)
 {
+    // Fetch patient using patient_id
+    $patient = Patient::findOrFail($patient_id);
     $patient->load([
         'medicalDetail',
         'admissionDetail',
@@ -415,6 +418,7 @@ public function create()
         'bills.items'
     ]);
 
+    // Pass the patient data to the view
     return view('patients.show', compact('patient'));
 }
 

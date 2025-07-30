@@ -17,8 +17,23 @@ class Bed extends Model
         'room_id',
         'bed_number',
         'status',
-        'patient_id',    // ← new
+        'patient_id',    
+         'rate',
     ];
+
+     protected $casts = [
+        'rate'     => 'decimal:2',
+    ];
+
+    /**
+     * If this bed has no custom rate, fall back to its room’s rate.
+     */
+    public function getDailyRateAttribute(): float
+    {
+        return $this->rate > 0
+            ? $this->rate
+            : $this->room->rate;
+    }
 
     public function room()
     {

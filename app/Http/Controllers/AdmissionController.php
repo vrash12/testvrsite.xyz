@@ -1,4 +1,5 @@
 <?php
+//app/Http/Controllers/AdmissionController.php
 
 namespace App\Http\Controllers;
 
@@ -27,6 +28,31 @@ class AdmissionController extends Controller
   public function __construct()
 {
     $this->middleware('auth');
+}
+public function dashboard()
+{
+    $totalPatients   = Patient::count();
+    $newAdmissions   = AdmissionDetail::whereDate('created_at', Carbon::today())->count();
+    $availableBeds   = Bed::where('status', 'available')->count();
+
+    $recentAdmissions = AdmissionDetail::with([
+        'patient',
+        'patient.medicalDetail',
+        'doctor',
+        'room'
+    ])
+    ->latest()
+    ->take(5)
+    ->get();
+
+    // (optional) Log for debugging
+    \Log::debug("Dashboard Data:", compact(
+        'totalPatients','newAdmissions','availableBeds','recentAdmissions'
+    ));
+
+    return view('admission.dashboard', compact(
+        'totalPatients','newAdmissions','availableBeds','recentAdmissions'
+    ));
 }
 
 
@@ -222,28 +248,6 @@ class AdmissionController extends Controller
     }
 }
 
-
-   
-public function dashboard()
-{
-    $totalPatients   = Patient::count();
-    $today           = Carbon::today();                  
-    $newAdmissions   = AdmissionDetail::whereDate('created_at', $today)
-                                      ->count();
-    $availableBeds   = Bed::where('status', 'available')->count();
-
-    $recentAdmissions = AdmissionDetail::with(['patient.medicalDetail','doctor'])
-                            ->latest()
-                            ->take(5)
-                            ->get();
-
-    return view('admission.dashboard', compact(
-        'totalPatients',
-        'newAdmissions',
-        'availableBeds',
-        'recentAdmissions'
-    ));
-}
 
 
     public function patients()

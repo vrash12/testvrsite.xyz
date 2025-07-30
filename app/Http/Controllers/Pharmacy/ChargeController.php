@@ -12,18 +12,26 @@ use App\Models\Doctor;
 
 class ChargeController extends Controller
 {
-    /**
-     * Display a listing of charges.
-     */
-    public function index()
+  public function index()
     {
+        // 1) Load existing charges
         $charges = PharmacyCharge::with('patient','items')
                     ->latest()
                     ->paginate(15);
 
-        return view('pharmacy.charges.index', compact('charges'));
-    }
+        // 2) Load data for your “New Charge” modal
+        $patients = Patient::orderBy('patient_last_name')->get();
+        $services = HospitalService::where('service_type', 'medication')
+                       ->orderBy('service_name')
+                       ->get();
 
+        // 3) Pass all three to the single index view
+        return view('pharmacy.charges.index', compact(
+            'charges',
+            'patients',
+            'services'
+        ));
+    }
  public function create()
     {
         // only medication‐type services
@@ -87,18 +95,16 @@ class ChargeController extends Controller
         $charge->update(['total_amount' => $total]);
 
         return redirect()
-            ->route('pharmacy.show', $charge)
+            ->route('pharmacy.dashboard', $charge)
             ->with('success','Medication charge created.');
     }
 
-    /**
-     * Display the specified charge.
-     */
-    public function show(PharmacyCharge $charge)
-    {
-        $charge->load('patient','items.service'); // service if you defined relationship
-        return view('pharmacy.show', compact('charge'));
-    }
+   public function show(PharmacyCharge $charge)
+{
+    $charge->load('patient','items.service');
+    return view('pharmacy.charges.show', compact('charge'));
+}
+
 
     /**
      * Show the form for editing the specified charge.

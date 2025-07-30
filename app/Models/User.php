@@ -1,7 +1,6 @@
 <?php
-
+// app/Models/User.php
 namespace App\Models;
-
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
@@ -23,7 +22,7 @@ class User extends Authenticatable
         'role',
         'department_id',
         'room_id',
-          'doctor_id',  
+        'doctor_id',
         'bed_id',
     ];
 
@@ -32,27 +31,26 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    // hash on assignment
     public function setPasswordAttribute($value)
     {
-        $this->attributes['password'] = Hash::make($value);
+        if (!\Illuminate\Support\Str::startsWith($value, '$2y$')) {
+            $value = Hash::make($value);
+        }
+        $this->attributes['password'] = $value;
     }
 
     public function patient()
-{
-    return $this->belongsTo(\App\Models\Patient::class, 'patient_id');
-}
+    {
+        return $this->belongsTo(\App\Models\Patient::class, 'patient_id');
+    }
 
-public function doctor()
-{
-    return $this->belongsTo(Doctor::class, 'doctor_id', 'doctor_id');
-}
+    public function doctor()
+    {
+        return $this->belongsTo(\App\Models\Doctor::class, 'doctor_id', 'doctor_id');
+    }
 
-//admissionDetail
-public function admissionDetail()
-{
-    return $this->hasOne(AdmissionDetail::class, 'patient_id', 'patient_id');
-
-}
-
+    public function admissionDetail()
+    {
+        return $this->hasOne(\App\Models\AdmissionDetail::class, 'patient_id', 'patient_id');
+    }
 }

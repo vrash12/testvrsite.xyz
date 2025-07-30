@@ -13,7 +13,27 @@
       <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
       {{-- CSS --}}
         <style>
-            .sidebar{width:240px; display:flex; flex-direction:column; background-color:#00529A ;}
+           body, html {
+        height: 100%;
+        margin: 0;
+      }
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 240px;
+        display: flex;
+        flex-direction: column;
+        background-color: #00529A;
+        overflow-y: auto; /* if your sidebar grows */
+      }
+      main {
+        margin-left: 240px; /* make room for sidebar */
+        height: 100vh;
+        overflow-y: auto;   /* only main scrolls */
+        padding: 1.5rem;
+      }
             .logo{ width:80px } 
             .avatar { width:90px; height: 90px; background-color: aliceblue; }
             .nav-link {transition: background-color 0.2s ease; border-radius: 0.375rem;}
@@ -29,7 +49,7 @@
     <div class="d-flex">
 
       {{-- Sidebar --}}
-      <aside class="sidebar bg-primary text-white p-3 vh-100 flex-shrink-0">
+    <aside class="sidebar text-white p-3">
 
           {{-- Top --}}
           <div class="text-center mb-6">
@@ -51,16 +71,18 @@
                   <span class="ms-2">Home</span>
               </a>
 
-              <a href="{{ route('pharmacy.medicines.index') }}"
+
+                     <a href="{{ route('pharmacy.medicines.index') }}"
                  class="nav-link d-flex text-white gap-2 px-2 py-2
                  {{ request()->routeIs('pharmacy.medicines.*') ? 'active' : '' }}">
                   <span class="icon justify-content-center align-items-center">
                         <i class="fas fa-medkit fa-xl"></i>
                   </span>
-                  <span class="ms-2">Queue</span>
+
+                  <span class="ms-2">Medicine</span>
               </a>
 
-              <a href="{{ route('pharmacy.medicines.create') }}"
+              <a href="{{ route('pharmacy.charges.index') }}"
                  class="nav-link d-flex text-white gap-2 px-2 py-2
                  {{ request()->routeIs('pharmacy.medicine.create') ? 'active' : '' }}">
                   <span class="">

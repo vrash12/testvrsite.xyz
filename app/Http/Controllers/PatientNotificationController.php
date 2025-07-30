@@ -1,6 +1,5 @@
 <?php
 // app/Http/Controllers/PatientNotificationController.php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -14,13 +13,10 @@ class PatientNotificationController extends Controller
         $this->middleware('auth');
     }
 
-    /**
-     * Show the patient’s notifications, with an optional filter.
-     */
     public function index(Request $request)
     {
         $user   = Auth::user();
-        $filter = $request->input('filter', 'All');
+        $filter = $request->input('filter', 'all');
 
         $query = $user->notifications()->orderBy('created_at', 'desc');
 
@@ -35,14 +31,10 @@ class PatientNotificationController extends Controller
         return view('patient.notifications', compact('notifications','filter'));
     }
 
-    /**
-     * Toggle read/unread for one notification.
-     */
     public function update(Request $request, DatabaseNotification $notification)
     {
         $user = Auth::user();
 
-        // ensure the notification belongs to this user
         if ($notification->notifiable_id !== $user->id) {
             abort(403);
         }
@@ -53,6 +45,12 @@ class PatientNotificationController extends Controller
             $notification->markAsUnread();
         }
 
+        return back();
+    }
+
+    public function markAllRead()
+    {
+        Auth::user()->unreadNotifications->markAsRead();
         return back();
     }
 }

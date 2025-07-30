@@ -1,4 +1,5 @@
 <?php
+//app/Http/Controllers/DoctorController.php
 namespace App\Http\Controllers;
 
 use App\Models\Doctor;
@@ -11,54 +12,66 @@ use App\Models\HospitalService; // ← import!
 use App\Models\Prescription;
 use App\Models\PrescriptionItem;
 use App\Models\AdmissionDetail; // ← import!
-//auth
-//ray
+use App\Models\Bill;   
 use Illuminate\Support\Facades\Auth;
 use App\Models\ServiceAssignment;
 use Carbon\Carbon;  
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\PharmacyCharge;
+use App\Models\PharmacyChargeItem;
+use Illuminate\Support\Str;
+
 
 
 class DoctorController extends Controller
 {
-    
 public function dashboard(Request $request)
-{
-    $q       = $request->input('q');
-    $doctor  = Auth::user()->doctor;          // users.doctor() relationship
-    $doctorId = optional($doctor)->doctor_id; // null-safe
+    {
+        $q = $request->input('q');
+        $user = Auth::user();
+        $doctor = $user->doctor;
+        $doctorId = optional($doctor)->doctor_id;
+        Log::debug("[DoctorDashboard] user_id {$user->user_id} doctorId {$doctorId}");
 
-    $patientsQuery = Patient::query();
-
-    if ($q) {
-        $patientsQuery->where(function($w) use ($q) {
-            $w->where('patient_id', 'like', "%{$q}%")
-              ->orWhere('patient_first_name', 'like', "%{$q}%")
-              ->orWhere('patient_last_name',  'like', "%{$q}%");
+        $patientsQuery = Patient::whereHas('admissionDetail', function($qb) use ($doctorId) {
+            $qb->where('doctor_id', $doctorId);
         });
-    }
+        $initialCount = $patientsQuery->count();
+        Log::debug("[DoctorDashboard] patientsQuery count before search: {$initialCount}");
 
-    $patients = $patientsQuery
-        ->with('admissionDetail.room')
-        ->orderBy('patient_last_name')
-        ->paginate(10)
-        ->withQueryString();
+        if ($q) {
+            $patientsQuery->where(function($w) use ($q) {
+                $w->where('patient_id', 'like', "%{$q}%")
+                  ->orWhere('patient_first_name', 'like', "%{$q}%")
+                  ->orWhere('patient_last_name', 'like', "%{$q}%");
+            });
+            $countAfterSearch = $patientsQuery->count();
+            Log::debug("[DoctorDashboard] patientsQuery count after search '{$q}': {$countAfterSearch}");
+        }
 
-    /* -------------- Recently admitted list ---------- */
-    $recentAdmissions = collect();   // default empty
+        $patients = $patientsQuery
+            ->with('admissionDetail.room')
+            ->orderBy('patient_last_name')
+            ->paginate(10)
+            ->withQueryString();
+        Log::debug("[DoctorDashboard] paginated total {$patients->total()} current page count {$patients->count()}");
 
-    if ($doctorId) {
-        $recentAdmissions = AdmissionDetail::with('patient', 'room')
+        $recentAdmissions = AdmissionDetail::with('patient','room')
             ->where('doctor_id', $doctorId)
-            ->whereDate('admission_date', Carbon::today())   // ↙ same-day admits
+            ->whereDate('admission_date', Carbon::today())
             ->latest('admission_date')
             ->take(10)
             ->get();
+        Log::debug("[DoctorDashboard] recentAdmissions count: " . count($recentAdmissions));
+
+        return view('doctor.dashboard', [
+            'patients' => $patients,
+            'q' => $q,
+            'recentAdmissions' => $recentAdmissions,
+        ]);
     }
 
-    return view('doctor.dashboard', compact('patients', 'q', 'recentAdmissions'));
-}
     public function showRegistrationForm()
     {
         return view('doctors.create');
@@ -70,6 +83,7 @@ public function dashboard(Request $request)
         $validated = $request->validate([
             'doctor_name' => 'required|string|max:255',
             'doctor_specialization' => 'required|string|max:255',
+            'rate' => 'required|numeric|min:0',
         ]);
 
         Doctor::create($validated);
@@ -95,76 +109,148 @@ public function orderEntry(Patient $patient)
         'otherServices'  => $services->where('service_type','service'),
     ]);
 }
+
 public function storeOrder(Request $request, Patient $patient)
 {
-    
-  $doctorId = optional(Auth::user()->doctor)->doctor_id
-            ?? Doctor::first()?->doctor_id
-            ?? abort(500, 'No doctor profile found.');
+    /* ───────────────────────────────────────────────────────────
+     *  0.  Common pre-flight
+     * ─────────────────────────────────────────────────────────── */
+    $rawPayload = $request->all();        // keep a copy for logging
+    $type       = $request->input('type');
+    $doctorId   = optional(Auth::user()->doctor)->doctor_id
+               ?? Doctor::first()?->doctor_id;
 
-
-    $type = $request->input('type');
-if ($request->input('type') === 'medication') {
-    // 1) Validate exactly as before
-    $data = $request->validate([
-        'medication_id' => 'required|exists:hospital_services,service_id',
-        'dosage'        => 'required|string',
-        'frequency'     => 'required|string',
-        'route'         => 'required|string',
-        'duration'      => 'required|integer|min:1',
-        'duration_unit' => 'required|string',
-        'instructions'  => 'nullable|string',
-        'quantity'      => 'required|integer|min:1',
-        'refills'       => 'required|integer|min:0',
-        'routing'       => 'required|in:internal,external',
-        'priority'      => 'required|in:routine,urgent,stat',
-        'daw'           => 'nullable|boolean',
+    // 🔎  initial diagnostic line
+    Log::debug('[OrderEntry] incoming request', [
+        'user_id'  => Auth::id(),
+        'patient'  => $patient->patient_id,
+        'type'     => $type,
+        'payload'  => $rawPayload,
     ]);
 
-    Log::debug('▶ Medication branch hit', $data);
+    if (! $doctorId) {
+        Log::warning('[OrderEntry] NO DOCTOR ID RESOLVED!');
+        return back()->withErrors('No doctor profile found.');
+    }
 
-    // 2) Fetch the service
-    $service = HospitalService::findOrFail($data['medication_id']);
-
-    // 3) Wrap in a transaction
+if ($type === 'medication') {
+    // 1️⃣  Validate (no dosage / freq / route anymore)
+    $data = $request->validate([
+        'medications'                 => 'required|array|min:1',
+        'medications.*.medication_id' => 'required|exists:hospital_services,service_id',
+        'medications.*.quantity'      => 'required|integer|min:1',
+        'medications.*.duration'      => 'required|integer|min:1',
+        'medications.*.duration_unit' => 'required|in:days,weeks',
+        'medications.*.instructions'  => 'nullable|string',
+       'refills' => 'nullable|integer|min:0',
+    'daw'     => 'nullable|boolean',
+    ]);
+$refills = $data['refills'] ?? 0;
+$daw     = $data['daw'] ?? false;
     DB::beginTransaction();
     try {
-        // PICK A VALID DOCTOR ID:
-        // - use the one on the user, or
-        // - fall back to the first doctor record in your table
-        $doctorId = Auth::user()->doctor_id 
-                    ?? Doctor::first()->doctor_id;
+        /* ── 2️⃣ Bill header (one per day) ─────────────────── */
+        $bill = Bill::firstOrCreate(
+            [
+                'patient_id'   => $patient->patient_id,
+                'admission_id' => optional($patient->admissionDetail)->admission_id,
+                'billing_date' => today(),
+            ],
+            ['payment_status' => 'pending']
+        );
 
-        // 4) Create prescription header
+        /* ── 3️⃣ Prescription header ───────────────────────── */
         $prescription = Prescription::create([
             'patient_id' => $patient->patient_id,
             'doctor_id'  => $doctorId,
+        'refills'    => $refills,   // ← optional
+    'daw'        => $daw,       // ← optional
         ]);
 
-        // 5) Create the item (minimal payload—no extra columns yet)
-        $prescription->items()->create([
-            'service_id'     => $service->service_id,
-            'name'           => $service->service_name,
-            'datetime'       => now(),
-            'quantity_asked' => $data['quantity'],
-            'quantity_given' => 0,
-            'status'         => 'pending',
-        ]);
+        /* ── 4️⃣ Pharmacy Charge header ───────────────────── */
+        $rxNumber = 'RX' . now()->format('YmdHis') . Str::upper(Str::random(3));
+
+       $pharmCharge = PharmacyCharge::create([
+    'patient_id'         => $patient->patient_id,
+    'prescribing_doctor' => Doctor::find($doctorId)->doctor_name ?? '-',
+    'rx_number'          => $rxNumber,
+    'notes'              => $data['medications'][0]['instructions'] ?? null,
+    'total_amount'       => 0,
+    'status'             => 'pending',
+]);
+
+        $grandTotal = 0;
+
+        /* ── 5️⃣ Loop through every medication row ─────────── */
+        foreach ($data['medications'] as $row) {
+            $svc   = HospitalService::findOrFail($row['medication_id']);
+            $line  = $svc->price * $row['quantity'];
+            $grandTotal += $line;
+
+            // 5a) Prescription item
+            $prescription->items()->create([
+                'service_id'     => $svc->service_id,
+                'name'           => $svc->service_name,
+                'datetime'       => now(),
+                'quantity_asked' => $row['quantity'],
+                'quantity_given' => 0,
+                'duration'       => $row['duration'],
+                'duration_unit'  => $row['duration_unit'],
+                'instructions'   => $row['instructions'] ?? '',
+                'status'         => 'pending',
+            ]);
+
+            // 5b) Bill item
+            $bill->items()->create([
+                'service_id'      => $svc->service_id,
+                'amount'          => $line,
+                'billing_date'    => now(),
+                'discount_amount' => 0,
+                'status'          => 'pending',
+            ]);
+
+            // 5c) Pharmacy-charge item
+            PharmacyChargeItem::create([
+                'charge_id'  => $pharmCharge->id,
+                'service_id' => $svc->service_id,
+                'quantity'   => $row['quantity'],
+                'unit_price' => $svc->price,
+                'total'      => $line,
+            ]);
+        }
+
+        // 6️⃣  Update pharmacy charge total
+        $pharmCharge->update(['total_amount' => $grandTotal]);
 
         DB::commit();
-        return back()->with('success','Medication order submitted.');
+
+        Log::debug('[OrderEntry] MED + PHARM OK', [
+            'bill_id'      => $bill->billing_id,
+            'rx'           => $pharmCharge->rx_number,
+            'presc_id'     => $prescription->id,
+        ]);
+
+        return back()->with('success', 'Medication orders submitted, billed & sent to pharmacy.');
+
     } catch (\Throwable $e) {
         DB::rollBack();
-        Log::error('Medication order failed', ['exception' => $e]);
-        return back()->withErrors('Unable to submit medication order. Please try again.');
+        Log::error('[OrderEntry] MED FAIL', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+        return back()->withErrors('Unable to submit medication orders.');
     }
 }
 
-
+    /* ───────────────────────────────────────────────────────────
+     *  B. LAB  +  IMAGING  (same form)
+     * ─────────────────────────────────────────────────────────── */
     if ($type === 'lab') {
         $data = $request->validate([
-            'labs'            => 'required|array|min:1',
+            'labs'            => 'nullable|array',
             'labs.*'          => 'exists:hospital_services,service_id',
+            'studies'         => 'nullable|array',               // ← imaging
+            'studies.*'       => 'exists:hospital_services,service_id',
             'diagnosis'       => 'nullable|string',
             'collection_date' => 'required|date',
             'priority'        => 'required|in:routine,urgent,stat',
@@ -172,132 +258,102 @@ if ($request->input('type') === 'medication') {
             'fasting'         => 'nullable|boolean',
         ]);
 
-    foreach ($data['labs'] as $service_id) {
+        // merge the two checkbox groups
+        $serviceIDs = collect($data['labs']   ?? [])
+                    ->merge($data['studies'] ?? [])
+                    ->unique()
+                    ->values();
+
+        if ($serviceIDs->isEmpty()) {
+            Log::info('[OrderEntry] LAB form submitted with no items');
+            return back()->withErrors('Select at least one Lab / Imaging study.');
+        }
+
+        foreach ($serviceIDs as $service_id) {
             $service = HospitalService::findOrFail($service_id);
 
             ServiceAssignment::create([
                 'patient_id'     => $patient->patient_id,
-                'doctor_id'      => $doctorId,   // ← fixed
+                'doctor_id'      => $doctorId,
                 'service_id'     => $service->service_id,
                 'datetime'       => $data['collection_date'],
                 'service_status' => 'pending',
             ]);
+
+            Log::debug('[OrderEntry] LAB/IMG assignment created', [
+                'service' => $service->service_name,
+            ]);
         }
-        return back()->with('success','Laboratory order submitted.');
+
+        return back()->with('success', 'Lab / Imaging order saved.');
     }
 
-    if ($type === 'imaging') {
+    /* ───────────────────────────────────────────────────────────
+     *  C. OTHER SERVICES
+     * ─────────────────────────────────────────────────────────── */
+    if ($type === 'service') {
         $data = $request->validate([
-            'studies'        => 'required|array|min:1',
-            'studies.*'      => 'exists:hospital_services,service_id',
+            'services'       => 'required|array|min:1',
+            'services.*'     => 'exists:hospital_services,service_id',
             'diagnosis'      => 'nullable|string',
             'scheduled_date' => 'required|date',
             'priority'       => 'required|in:routine,urgent,stat',
+            'frequency'      => 'nullable|string',
+            'duration'       => 'nullable|integer|min:1',
+            'duration_unit'  => 'nullable|string',
             'instructions'   => 'nullable|string',
-            'transport'      => 'required|in:ambulatory,wheelchair,stretcher',
-            'contrast'       => 'nullable|boolean',
         ]);
 
-     foreach ($data['studies'] as $service_id) {
-        $service = HospitalService::findOrFail($service_id);
+        DB::beginTransaction();
+        try {
+            foreach ($data['services'] as $service_id) {
+                $service = HospitalService::findOrFail($service_id);
 
-        ServiceAssignment::create([
-            'patient_id'     => $patient->patient_id,
-            'doctor_id'      => $doctorId,           
-            'service_id'     => $service->service_id,
-            'datetime'       => $data['scheduled_date'],
-            'service_status' => 'pending',
-        ]);
-    }
-
-        return back()->with('success','Imaging order submitted.');
-    }
-
-if ($type === 'service') {
-$doctorId = optional(Auth::user()->doctor)->doctor_id
-              ?? Doctor::first()?->doctor_id;
-
-    if (! $doctorId) {
-        return back()->withErrors(
-            'No doctor profile found. Please contact admin.'
-        );
-    }
-    DB::enableQueryLog();
-
-    // 1️⃣  — validate & capture input -------------------------
-    $data = $request->validate([
-        'services'       => 'required|array|min:1',
-        'services.*'     => 'exists:hospital_services,service_id',
-        'diagnosis'      => 'nullable|string',
-        'scheduled_date' => 'required|date',
-        'priority'       => 'required|in:routine,urgent,stat',
-        'frequency'      => 'nullable|string',
-        'duration'       => 'nullable|integer|min:1',
-        'duration_unit'  => 'nullable|string',
-        'instructions'   => 'nullable|string',
-    ]);
-
-
-    // 2️⃣  — log the validated payload
-    Log::debug('▶ SERVICE branch hit', $data);
-
-    // 3️⃣  — wrap everything in a transaction ---------------
-    DB::beginTransaction();
-    try {
-        foreach ($data['services'] as $service_id) {
-            $service = HospitalService::findOrFail($service_id);
-
-            Log::debug('Creating ServiceAssignment', [
-                'patient_id' => $patient->patient_id,
-                'doctor_id'  => $doctorId,          // <—— use the same resolved id
-                'service_id' => $service->service_id,
+                ServiceAssignment::create([
+                    'patient_id'     => $patient->patient_id,
+                    'doctor_id'      => $doctorId,
+                    'service_id'     => $service->service_id,
+                    'datetime'       => $data['scheduled_date'],
+                    'service_status' => 'pending',
+                ]);
+            }
+            DB::commit();
+            Log::debug('[OrderEntry] OTHER services OK', $data['services']);
+            return back()->with('success', 'Service order submitted.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('[OrderEntry] OTHER services FAILED', [
+                'error' => $e->getMessage(),
             ]);
-
-            ServiceAssignment::create([
-                'patient_id'     => $patient->patient_id,
-                'doctor_id'      => $doctorId,      // <—— DON’T use Auth::id()
-                'service_id'     => $service->service_id,
-                'datetime'       => $data['scheduled_date'],
-                'service_status' => 'pending',
-            ]);
+            return back()->withErrors('Unable to submit service order.');
         }
-
-        DB::commit();
-
-        // 4️⃣  — dump the SQL that just ran (comment out when done)
-        Log::debug('Executed SQL', DB::getQueryLog());
-
-        return back()->with('success', 'Service order submitted.');
-    } catch (\Throwable $e) {
-        DB::rollBack();
-
-        // 5️⃣  — log the full exception & surface a friendly error
-        Log::error('Service order FAILED', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
-        ]);
-
-        return back()->withErrors(
-            'Unable to submit service order: '.$e->getMessage()
-        );
     }
-}
-    abort(400,'Unknown order type');
+
+    /* ───────────────────────────────────────────────────────────
+     *  D. Unknown type
+     * ─────────────────────────────────────────────────────────── */
+    Log::warning('[OrderEntry] Unknown type supplied', ['type' => $type]);
+    abort(400, 'Unknown order type');
 }
 
-// in DoctorController.php
-public function ordersIndex()
-{
-    $patients = Patient::where(function($q) {
-            $q->whereHas('serviceAssignments')
-              ->orWhereHas('prescriptions');
-        })
-        ->withCount(['serviceAssignments','prescriptions'])
-        ->orderBy('service_assignments_count','desc')
-        ->paginate(12);
 
-    return view('doctor.orders-index', compact('patients'));
-}
+public function ordersIndex(Request $request)
+    {
+        $doctorId = optional(Auth::user()->doctor)->doctor_id;
+        $patients = Patient::whereHas('admissionDetail', function($q) use ($doctorId) {
+                $q->where('doctor_id', $doctorId);
+            })
+            ->where(function($q) {
+                $q->whereHas('serviceAssignments')
+                  ->orWhereHas('prescriptions');
+            })
+            ->withCount(['serviceAssignments','prescriptions'])
+            ->orderBy('service_assignments_count','desc')
+            ->paginate(12);
+
+        return view('doctor.orders-index', compact('patients'));
+    }
+
 
 // in DoctorController.php
 
