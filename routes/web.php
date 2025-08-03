@@ -74,6 +74,9 @@ Route::post('notifications/mark-all-read', [PatientNotificationController::class
     // 1) Dashboard ("Home" for billing users)
     Route::get('dashboard', [BillingDashboardController::class, 'index'])
          ->name('dashboard');
+         Route::patch('patients/{patient}/toggle-lock', [BillingChargeController::class, 'toggleLock'])
+         ->name('patients.toggleLock');
+         Route::patch('dispute/{dispute}', [DisputeController::class, 'update'])->name('disputes.update');
 
     // 2) Patient Bills / Manual Charges list
     Route::get('main', [PatientBillingController::class, 'index'])
@@ -155,10 +158,16 @@ Route::get(
     [PatientBillingController::class, 'chargeTrace']
 )->name('billing.chargeTrace');
 
-Route::post('disputes', [DisputeController::class,'store'])
-              ->name('disputes.store');
- Route::get('disputes', [DisputeController::class,'myDisputes'])
-              ->name('disputes.mine');
+   // POST /patient/disputes
+   Route::post('disputes',
+   [DisputeController::class,'store']
+)->name('disputes.store');      // becomes patient.disputes.store
+
+// GET  /patient/disputes
+Route::get('disputes',
+   [DisputeController::class,'myDisputes']
+)->name('disputes.mine');       // becomes patient.disputes.mine
+
   Route::get('notifications', [PatientNotificationController::class, 'index'])->name('notification');  
   Route::patch('notifications/{notification}', [PatientNotificationController::class, 'update'])
               ->name('notifications.update');
@@ -176,10 +185,13 @@ Route::prefix('laboratory')->name('laboratory.')
          Route::get('dashboard',   [LabController::class, 'dashboard'])->name('dashboard');
          Route::get('queue',       [LabController::class, 'queue'])->name('queue');
 
-         // Creating new lab *requests* (i.e. ServiceAssignment)
-         Route::get('create',      [LabController::class, 'create'])->name('create');
-         Route::post('store',      [LabController::class, 'store'])->name('store');
+      // show the “Add Lab Charge” form
+         Route::get('create', [LabController::class, 'create'])
+              ->name('create');
 
+         // handle the form POST
+         Route::post('store', [LabController::class, 'store'])
+              ->name('store');
          // Viewing & completing existing *requests*
          Route::get('details/{assignment}',       [LabController::class, 'show'])
               ->name('details');
@@ -211,7 +223,16 @@ Route::prefix('laboratory')->name('laboratory.')
      ->group(function(){
          Route::get('dashboard',      [SuppliesController::class,'dashboard'])
               ->name('dashboard');
+ Route::post('items', [SuppliesController::class, 'storeItem'])
+         ->name('items.store');
 
+    // UPDATE
+    Route::put('items/{service}', [SuppliesController::class, 'updateItem'])
+         ->name('items.update');
+
+    // DELETE
+    Route::delete('items/{service}', [SuppliesController::class, 'destroyItem'])
+         ->name('items.destroy');
          Route::get('create',         [SuppliesController::class,'create'])
               ->name('create');
 
@@ -228,6 +249,9 @@ Route::prefix('laboratory')->name('laboratory.')
               ->name('complete');
                 Route::post('{id}/checkout', [SuppliesController::class,'checkout'])
          ->name('checkout');
+         
+         Route::delete('items/{service}', [SuppliesController::class, 'destroyItem'])
+         ->name('items.destroy');
              
      });
 
@@ -320,6 +344,8 @@ Route::prefix('doctor')
          // GET /doctor/dashboard → DoctorController@dashboard
          Route::get('/dashboard', [DoctorController::class,'dashboard'])
               ->name('dashboard');
+Route::get('/orders/{patient}', [DoctorController::class, 'patientOrders'])
+     ->name('orders.show');
 
   Route::get('/patients/{patient}', [DoctorController::class,'show'])
               ->name('patient.show');

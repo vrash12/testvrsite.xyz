@@ -45,20 +45,44 @@
     </div>
 </div>
 @endsection
-
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.patient-card').forEach(card => {
-        card.addEventListener('click', e => {
-            const id   = e.currentTarget.dataset.id
-            const name = e.currentTarget.dataset.name
-            document.getElementById('modalTitle').textContent = name + ' (P-' + id + ')'
-            fetch('/doctor/patient-orders/' + id)
-                .then(r => r.text())
-                .then(html => document.getElementById('modalBody').innerHTML = html)
-        })
-    })
-})
+  const baseUrl = "{{ url('/doctor/orders') }}/";   // ➜ "/doctor/orders/"
+
+  document.querySelectorAll('.patient-card').forEach(card => {
+    card.addEventListener('click', e => {
+      const id   = e.currentTarget.dataset.id
+      const name = e.currentTarget.dataset.name
+      document.getElementById('modalTitle').textContent =
+        `${name} (P-${id})`
+
+      document.getElementById('modalBody').innerHTML =
+        '<p class="text-muted">Loading…</p>';
+
+      fetch(baseUrl + id)                       // ← matches the route above
+        .then(r => r.text())
+        .then(html => document.getElementById('modalBody').innerHTML = html)
+        .catch(() => {
+          document.getElementById('modalBody').innerHTML =
+            '<p class="text-danger">Unable to load orders.</p>';
+        });
+    });
+  });
+});
 </script>
 @endpush
+
+@if(session('show_patient'))
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const pid   = "{{ session('show_patient') }}";
+  const card  = document.querySelector(`.patient-card[data-id='${pid}']`);
+  if (card) card.click();   // triggers the same fetch + modal open
+});
+</script>
+@endpush
+@endif
+
+

@@ -1,4 +1,5 @@
 {{-- resources/views/operatingroom/queue.blade.php --}}
+@php use Carbon\Carbon; @endphp
 
 @extends('layouts.operatingroom')
 
@@ -69,8 +70,10 @@
                     <tbody>
                     @forelse($procedures as $procedure)
                         <tr data-status="{{ $procedure->service_status }}" data-or="{{ $procedure->room }}" data-name="{{ strtolower($procedure->patient->patient_first_name.' '.$procedure->patient->patient_last_name) }}" data-mrn="{{ $procedure->patient->patient_id }}">
-                   <td>
-    {{ optional($procedure->created_at)->format('M j, Y g:i A') ?? '–' }}
+                        <td>
+  {{ $procedure->datetime
+      ? Carbon::parse($procedure->datetime)->format('M j, Y g:i A')
+      : '–' }}
 </td>
 
                             <td>

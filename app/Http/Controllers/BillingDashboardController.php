@@ -9,6 +9,8 @@ use App\Models\ServiceAssignment;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use App\Models\Deposit;
+use App\Models\PharmacyCharge;
 
 
 class BillingDashboardController extends Controller
@@ -59,16 +61,35 @@ class BillingDashboardController extends Controller
 
     public function print(Patient $patient)
     {
-        $charges = BillItem::with('service')
-                   ->where('patient_id', $patient->patient_id)
-                   ->get();
+        // 1. Eager load patient details for efficiency
+        $patient->load('admissionDetail');
 
-        $pdf = Pdf::loadView('billing.pdf.soa', [
-            'patient' => $patient,
-            'charges' => $charges,
-        ]);
+        // 2. Fetch all billable items for the patient
+        $all_charges = BillItem::whereHas('bill', fn($q) => $q->where('patient_id', $patient->patient_id))
+            ->with('service')
+            ->get();
+        // Note: For a complete statement, you would also merge in ServiceAssignments and PharmacyCharges here.
 
-        return $pdf->download("soa_{$patient->patient_id}.pdf");
+        // 3. Calculate totals
+        $totalCharges = $all_charges->sum('amount');
+        $totalDeposits = Deposit::where('patient_id', $patient->patient_id)->sum('amount');
+        $balance = $totalCharges - $totalDeposits;
+
+        $data = [
+            'patient'     => $patient,
+            'all_charges' => $all_charges,
+            'totals'      => [
+                'charges'  => $totalCharges,
+                'deposits' => $totalDeposits,
+                'balance'  => $balance,
+            ],
+        ];
+
+        // 4. Load the view and generate the PDF
+        $pdf = Pdf::loadView('billing.pdf.statement', $data);
+
+        // 5. Stream the PDF to the browser
+        return $pdf->stream('SOA-' . $patient->patient_id . '-' . now()->format('Ymd') . '.pdf');
     }
 
     // likewise for lock

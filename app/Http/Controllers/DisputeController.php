@@ -3,37 +3,34 @@
 namespace App\Http\Controllers;
 
 use App\Models\Dispute;
-use App\Models\BillItem;
-use App\Models\User;          // for notifiable (patient & billing staff)
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
-use App\Notifications\DisputeFiled;
-use Illuminate\Support\Facades\Log;    
-use App\Helpers\Audit;
-use App\Notifications\DisputeResolved;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 
 class DisputeController extends Controller
 {
 
-   public function __construct()
+    public function __construct()
     {
         $this->middleware('auth');
         $this->middleware('role:patient')->only(['store', 'myDisputes']);
-        $this->middleware('role:billing')->only(['index','show','update','queue']);
+        $this->middleware('role:billing')->only(['queue', 'show', 'update']); // 'index' was redundant
     }
 
-  public function queue(Request $request)
+    /**
+     * For Billing Staff: Shows a queue of disputes.
+     */
+    public function queue(Request $request)
     {
-        // Optional: apply search & status filters
         $query = Dispute::query();
 
         if ($q = $request->input('q')) {
             $query->whereHas('patient', fn($q2) =>
                 $q2->where('patient_first_name', 'like', "%{$q}%")
-                   ->orWhere('patient_last_name', 'like', "%{$q}%")
-                   ->orWhere('patient_id', $q)
+                  ->orWhere('patient_last_name', 'like', "%{$q}%")
+                  ->orWhere('patient_id', $q)
             );
         }
 
@@ -43,123 +40,117 @@ class DisputeController extends Controller
             }
         }
 
-        $disputes = $query->with(['patient','billItem.bill','billItem.service'])
-                          ->latest('datetime')
-                          ->paginate(15)
-                          ->withQueryString();
+        // ✅ FIX: Eager load the polymorphic 'disputable' relationship
+        $disputes = $query->with(['patient', 'disputable'])
+                         ->latest('datetime')
+                         ->paginate(15)
+                         ->withQueryString();
 
         return view('billing.dispute.queue', compact('disputes'));
     }
 
+    /**
+     * For Patients: Stores a new dispute request.
+     */
     public function store(Request $request)
     {
         \Log::debug('⏳ DisputeController@store start', $request->all());
-    
+
         $request->validate([
-            'bill_item_id' => 'required|exists:bill_items,billing_item_id',
+            'bill_item_id' => 'required|string',
             'reason'       => 'required|string|max:2000',
         ]);
-    
-        $billItem = BillItem::with('bill.patient')->findOrFail($request->bill_item_id);
-    
-        abort_unless(
-            $billItem->bill->patient_id === auth()->user()->patient_id,
-            403,
-            'You may dispute only your own charges.'
-        );
-    
-        $dispute = Dispute::create([
-            'billing_item_id' => $billItem->billing_item_id,
-            'patient_id'      => $billItem->bill->patient_id,
-            'datetime'        => now(),
-            'reason'          => $request->reason,
-            'status'          => 'pending',
+
+        $disputableId   = $request->bill_item_id;
+        $disputableType = null;
+        $modelId        = null;
+
+        if (Str::startsWith($disputableId, 'SA-')) {
+            $disputableType = \App\Models\ServiceAssignment::class;
+            $modelId        = intval(Str::after($disputableId, 'SA-'));
+        } elseif (Str::startsWith($disputableId, 'RX-')) {
+            $disputableType = \App\Models\PharmacyChargeItem::class;
+            // ✅ FIX: This was incorrectly looking for 'SA-' instead of 'RX-'
+            $modelId        = intval(Str::after($disputableId, 'RX-'));
+        } else {
+            $disputableType = \App\Models\BillItem::class;
+            $modelId        = intval($disputableId);
+        }
+
+        $disputable = $disputableType::findOrFail($modelId);
+
+        // Authorization check
+        $patientId = $disputable->patient_id ?? $disputable->charge->patient_id ?? $disputable->bill->patient_id ?? null;
+        abort_if($patientId !== Auth::user()->patient_id, 403, 'You may dispute only your own charges.');
+
+        $dispute = $disputable->disputes()->create([
+            'patient_id' => Auth::user()->patient_id,
+            'datetime'   => now(),
+            'reason'     => $request->reason,
+            'status'     => 'pending',
         ]);
-    
+
         \Log::debug('✅ Dispute created', ['dispute_id' => $dispute->dispute_id]);
-    
-        // notify billing…
-        $billingUsers = User::where('role','billing')->get();
-        Notification::send($billingUsers, new DisputeFiled($dispute));
-    
+
+        $billingUsers = \App\Models\User::where('role', 'billing')->get();
+        Notification::send($billingUsers, new \App\Notifications\DisputeFiled($dispute));
+
         return redirect()
             ->route('patient.disputes.mine')
             ->with('success', 'Your dispute has been filed! We’ll let you know when billing reviews it.');
     }
-    
 
-    
-
-    /**
-     * GET /my-disputes
-     * Lists the authenticated patient’s disputes.
-     */
     public function myDisputes()
     {
         $disputes = Dispute::where('patient_id', auth()->user()->patient_id)
-                           ->with(['billItem.bill', 'billItem.service'])
-                           ->latest('datetime')
-                           ->paginate(10);
-
-        return view('disputes.patient_index', compact('disputes'));
+                            // ✅ FIX: Eager load the nested 'service' relationship
+                            ->with(['disputable.service'])
+                            ->latest('datetime')
+                            ->paginate(10);
+    
+        return view('patient.disputes.index', compact('disputes'));
     }
 
-    /* -----------------------------------------------------------------
-     |  BILLING-STAFF ACTIONS
-     |------------------------------------------------------------------*/
-
-    /**
-     * GET /disputes
-     * Shows all unresolved disputes.
-     */
-    public function index()
+    public function show(Dispute $dispute)
     {
-        $disputes = Dispute::where('status', 'pending')
-                           ->with(['patient', 'billItem.bill', 'billItem.service'])
-                           ->latest('datetime')
-                           ->paginate(15);
-
-        return view('disputes.index', compact('disputes'));
+        // 1. Load main dispute data and patient info with their latest admission details
+        $dispute->load(['disputable.service.department']);
+        $patient = $dispute->patient()->with('admissionDetail')->first();
+        $disputed_charge = $dispute->disputable;
+    
+        // 2. Fetch ALL charges for this patient to display in the transaction history
+        // Note: This logic can be moved to a dedicated service class later for cleanliness
+        $bill_items = \App\Models\BillItem::whereHas('bill', fn($q) => $q->where('patient_id', $patient->patient_id))
+            ->with('service.department')->get();
+        
+        // In a real-world scenario, you would also merge ServiceAssignments and PharmacyCharges here
+        // For now, we will display the bill_items as the main transaction history.
+        $all_charges = $bill_items;
+    
+        // 3. Calculate totals from the fetched charges
+        $totalCharges = $all_charges->sum(function($item) {
+            return $item->amount - ($item->discount_amount ?? 0);
+        });
+        $totalDeposits = \App\Models\Deposit::where('patient_id', $patient->patient_id)->sum('amount');
+        $balance = $totalCharges - $totalDeposits;
+    
+        // 4. Get services for the "Manual Charge" modal
+        $services = \App\Models\HospitalService::orderBy('service_type')->get();
+    
+        // 5. Pass all data to the view
+        return view('billing.show', compact(
+            'dispute',
+            'patient',
+            'disputed_charge',
+            'all_charges',
+            'totalCharges',
+            'totalDeposits',
+            'balance',
+            'services'
+        ));
     }
-public function show(Dispute $dispute)
-{
-    // 1) Eager-load related data
-    $dispute->load([
-        'patient',
-        'billItem.bill.items.service.department',
-        'billItem.service.department',
-        'billItem.logs',
-    ]);
-
-    // 2) Extract patient & the single disputed charge
-    $patient = $dispute->patient;
-    $charge  = $dispute->billItem;
-
-    // 3) Grab the parent Bill and all its items
-    $bill    = $charge->bill;
-    $charges = $bill->items;  // Collection of BillItem models
-
-    // 4) Compute totals
-    $totalCharges  = $charges->sum(fn($item) => $item->amount - ($item->discount_amount ?? 0));
-    // If you have a Deposit model/relation, swap out the next line:
-    $totalDeposits = 0;  
-    $balance       = $totalCharges - $totalDeposits;
-
-    // 5) Return the view with everything it needs
-    return view('billing.show', compact(
-        'dispute',
-        'patient',
-        'charge',
-        'charges',
-        'totalCharges',
-        'totalDeposits',
-        'balance'
-    ));
-}
-
     /**
-     * PATCH /disputes/{dispute}
-     * Accepts: action = approve|reject  ;  optional notes
+     * For Billing Staff: Approves or rejects a dispute.
      */
     public function update(Request $request, Dispute $dispute)
     {
@@ -167,44 +158,36 @@ public function show(Dispute $dispute)
             'action' => 'required|in:approve,reject',
             'notes'  => 'nullable|string|max:2000',
         ]);
+        
+        // ✅ FIX: Use the polymorphic relationship to get the disputed item.
+        $disputedItem = $dispute->disputable;
 
-        DB::transaction(function () use ($request, $dispute) {
+        // Ensure the item is a model that has 'amount' and 'discount_amount' fields before updating.
+        if (!($disputedItem instanceof \App\Models\BillItem)) {
+             // For now, we can only auto-adjust BillItems.
+             // You could add logic here for other types if needed.
+            return back()->with('error', 'Cannot automatically adjust this charge type.');
+        }
 
-            // Update dispute status
+        DB::transaction(function () use ($request, $dispute, $disputedItem) {
             $dispute->update([
                 'status'      => $request->action === 'approve' ? 'approved' : 'rejected',
                 'approved_by' => auth()->id(),
             ]);
 
-            /* If approved, zero-out or adjust the bill item */
             if ($request->action === 'approve') {
-                $dispute->billItem->update([
-                    'discount_amount' => $dispute->billItem->amount,
+                $disputedItem->update([
+                    'discount_amount' => $disputedItem->amount,
+                    'notes' => $request->notes ?? $disputedItem->notes,
                 ]);
             }
-
-            /* Optional notes can be stored as a JSON meta column, or a new table.
-               Shown here as a quick example of attaching staff notes:           */
-            if ($request->filled('notes')) {
-                $dispute->billItem->update([
-                    'notes' => $request->notes,
-                ]);
-            }
-
-                        Audit::log(
-                $dispute->billItem->billing_item_id,
-                ucfirst($request->action),
-                "Dispute {$request->action} by ".auth()->user()->username,
-                auth()->user()->username,
-                $request->action === 'approve' ? 'fa-check' : 'fa-times'
-            );
         });
 
-        /* Notify the patient */
-        $dispute->patient->notify(new DisputeResolved($dispute));
+        $dispute->patient->notify(new \App\Notifications\DisputeResolved($dispute));
 
+        // Redirect to the main queue for billing staff
         return redirect()
-            ->route('disputes.index')
+            ->route('billing.dispute.queue')
             ->with('success', 'Dispute processed.');
     }
 }

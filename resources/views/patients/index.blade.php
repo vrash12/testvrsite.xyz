@@ -16,11 +16,10 @@
         </div>
     </div>
 
-    {{-- Search form: GET q parameter --}}
+    {{-- Search form --}}
     <form method="GET" action="{{ route('admission.patients.index') }}">
         <div class="row mb-3">
             <div class="col-md-11">
-                {{-- Input name “q” matches controller’s input('q') --}}
                 <input
                     type="text"
                     name="q"
@@ -30,7 +29,6 @@
                 >
             </div>
             <div class="col-md-1">
-                {{-- Button submits the form --}}
                 <button type="submit" class="btn btn-outline-primary w-100">
                     <i class="fa-solid fa-magnifying-glass me-2"></i>Search
                 </button>
@@ -65,7 +63,6 @@
                     <td>{{ $patient->admissionDetail?->admission_date?->format('Y-m-d') ?? '—' }}</td>
                     <td>{{ $patient->admissionDetail?->doctor?->doctor_name ?? '—' }}</td>
                     <td>
-                        {{-- Badge color based on status --}}
                         @php
                             $badge = match(strtolower($patient->status)) {
                                 'active'    => 'bg-success',
@@ -79,14 +76,13 @@
                         </span>
                     </td>
                     <td>
-           <a href="{{ route('admission.patients.show', optional($adm->patient)->patient_id) }}" class="btn btn-sm btn-primary">
-    <i class="fa-solid fa-eye me-2"></i>View
-</a>
-
+                        {{-- FIXED: use $patient, not $adm --}}
+                        <a href="{{ route('admission.patients.show', $patient->patient_id) }}" class="btn btn-sm btn-primary">
+                            <i class="fa-solid fa-eye me-2"></i>View
+                        </a>
                     </td>
                 </tr>
             @empty
-                {{-- No patients found --}}
                 <tr>
                     <td colspan="7" class="text-center text-muted">No patients found.</td>
                 </tr>
@@ -94,7 +90,7 @@
         </tbody>
     </table>
 
-    {{-- Pagination, preserving query string (q, status, etc.) --}}
+    {{-- Pagination --}}
     <div class="d-flex justify-content-end">
         {{ $patients->withQueryString()->links('pagination::bootstrap-5') }}
     </div>

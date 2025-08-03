@@ -63,6 +63,7 @@ $patientsServed = PharmacyCharge::completed()->distinct('patient_id')->count('pa
     ));
 }
 
+
 public function dispense(PharmacyCharge $charge)
 {
     if ($charge->status === 'completed') {
@@ -74,10 +75,11 @@ public function dispense(PharmacyCharge $charge)
       'dispensed_at' => now(),
     ]);
 
+    // notify the patient
+    $charge->patient->notify(new PharmacyChargeDispensed($charge));
+
     return back()->with('success','Medication dispensed & flagged for billing.');
 }
-
-
     public function create()
     {
         // Active patients
@@ -91,54 +93,52 @@ public function dispense(PharmacyCharge $charge)
         return view('pharmacy.create', compact('patients','services'));
     }
 
-    /**
-     * POST /pharmacy
-     * Validate and save a new medication charge.
-     */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'patient_id'             => 'required|exists:patients,patient_id',
-            'prescribing_doctor'     => 'required|string|max:255',
-            'rx_number'              => 'required|string|max:100',
-            'notes'                  => 'nullable|string',
+        $patient = Patient::findOrFail($request->patient_id);
+        if ($patient->billing_closed_at) {
+            return back()->with('error', 'Action failed: The patient\'s bill is locked.');
+        }
 
-            'medications'            => 'required|array|min:1',
-            'medications.*.service_id'  => 'required|exists:hospital_services,service_id',
-            'medications.*.quantity'    => 'required|integer|min:1',
+        $data = $request->validate([
+            'patient_id'         => 'required|exists:patients,patient_id',
+            'prescribing_doctor' => 'required|string|max:255',
+            'rx_number'          => 'required|string|max:100',
+            'notes'              => 'nullable|string',
+            'medications'        => 'required|array|min:1',
+            'medications.*.service_id' => 'required|exists:hospital_services,service_id',
+            'medications.*.quantity'   => 'required|integer|min:1',
         ]);
 
-        DB::transaction(function() use($data) {
-            // Create the charge record
+        DB::transaction(function() use($data, &$charge) {
             $charge = PharmacyCharge::create([
                 'patient_id'         => $data['patient_id'],
                 'prescribing_doctor' => $data['prescribing_doctor'],
                 'rx_number'          => $data['rx_number'],
                 'notes'              => $data['notes'] ?? null,
-                'total_amount'       => 0, // will update below
+                'total_amount'       => 0,
             ]);
 
             $grandTotal = 0;
-
-            // Create each item line
             foreach ($data['medications'] as $item) {
                 $service   = Service::findOrFail($item['service_id']);
-                $unitPrice = $service->price;
-                $lineTotal = $unitPrice * $item['quantity'];
+                $lineTotal = $service->price * $item['quantity'];
                 $grandTotal += $lineTotal;
 
                 PharmacyChargeItem::create([
                     'charge_id'   => $charge->id,
                     'service_id'  => $service->service_id,
                     'quantity'    => $item['quantity'],
-                    'unit_price'  => $unitPrice,
+                    'unit_price'  => $service->price,
                     'total'       => $lineTotal,
                 ]);
             }
 
-            // Update the grand total
             $charge->update(['total_amount' => $grandTotal]);
         });
+
+        // notify the patient
+        $charge->patient->notify(new PharmacyChargeCreated($charge));
 
         return redirect()
             ->route('pharmacy.index')

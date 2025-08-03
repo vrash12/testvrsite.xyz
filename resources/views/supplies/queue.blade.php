@@ -84,9 +84,10 @@
     @if($misc->status === 'pending')
       <form action="{{ route('supplies.complete', $misc->id) }}" method="POST" class="m-0">
         @csrf
-        <button class="btn btn-sm btn-outline-success">
-          <i class="fa-solid fa-check me-1"></i>Confirm
-        </button>
+        <button class="btn btn-sm btn-outline-success confirm-btn">
+    <i class="fa-solid fa-check me-1"></i>Confirm
+</button>
+
       </form>
     @else
       <span class="btn btn-sm btn-outline-secondary disabled">
@@ -104,6 +105,10 @@
         @endforelse
       </tbody>
     </table>
+    <div class="mt-3">
+    {{ $miscReq->links() }}
+</div>
+
   </div>
 </div>
 @endsection

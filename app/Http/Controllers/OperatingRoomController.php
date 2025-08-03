@@ -10,6 +10,8 @@ use App\Models\Doctor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use App\Notifications\ORChargeCreated;
+
 
 class OperatingRoomController extends Controller
 {
@@ -162,6 +164,8 @@ class OperatingRoomController extends Controller
                 'icon'         => 'fa-user-md',
             ]);
         }
+
+        $patient->notify(new ORChargeCreated($assignment));
     
         return redirect()->route('operating.queue')
                          ->with('success','Operating-room charges recorded.');

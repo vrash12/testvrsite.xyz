@@ -112,6 +112,10 @@ public function orderEntry(Patient $patient)
 
 public function storeOrder(Request $request, Patient $patient)
 {
+  
+    if ($patient->billing_closed_at) {
+        return back()->with('error', 'Action failed: The patient\'s bill is locked.');
+    }
     /* ───────────────────────────────────────────────────────────
      *  0.  Common pre-flight
      * ─────────────────────────────────────────────────────────── */
@@ -334,6 +338,12 @@ $daw     = $data['daw'] ?? false;
      * ─────────────────────────────────────────────────────────── */
     Log::warning('[OrderEntry] Unknown type supplied', ['type' => $type]);
     abort(400, 'Unknown order type');
+    
+    return redirect()
+       ->route('doctor.orders.index')
+       ->with('success', 'Order saved.')
+       ->with('show_patient', $patient->patient_id);
+
 }
 
 

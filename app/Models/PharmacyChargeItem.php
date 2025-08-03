@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 class PharmacyChargeItem extends Model
 {
     protected $table      = 'pharmacy_charge_items';
@@ -21,6 +21,10 @@ class PharmacyChargeItem extends Model
     {
         return $this->belongsTo(HospitalService::class, 'service_id');
     }
+    public function disputes(): MorphMany
+{
+    return $this->morphMany(Dispute::class, 'disputable');
+}
 
     public function getMedicationNameAttribute(): string
     {

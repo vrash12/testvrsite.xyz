@@ -38,6 +38,10 @@ class ChargeController extends Controller
     }
 public function store(Request $request)
 {
+    $patient = Patient::findOrFail($request->patient_id);
+    if ($patient->billing_closed_at) {
+        return back()->with('error', 'Action failed: The patient\'s bill is locked.');
+    }
     $data = $request->validate([
         'patient_id'           => 'required|exists:patients,patient_id',
         'charges'              => 'required|array|min:1',
@@ -125,5 +129,21 @@ public function store(Request $request)
     {
         $item = BillItem::with('logs')->findOrFail($itemId);
         return view('billing.charges.audit', compact('item'));
+    }
+    public function toggleLock(Patient $patient)
+    {
+        if ($patient->billing_closed_at) {
+            // Bill is currently LOCKED, so UNLOCK it.
+            $patient->billing_closed_at = null;
+            $message = 'unlocked';
+        } else {
+            // Bill is currently UNLOCKED, so LOCK it.
+            $patient->billing_closed_at = now();
+            $message = 'locked';
+        }
+
+        $patient->save();
+
+        return back()->with('success', "Patient's bill has been successfully {$message}.");
     }
 }

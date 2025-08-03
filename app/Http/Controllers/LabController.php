@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\Patient;
-//array
+use App\Notifications\LabChargeCreated;
+use App\Notifications\LabChargeCompleted;
 use Illuminate\Support\Facades\DB;
 use App\Models\LabTest;
 use Carbon\Carbon;
@@ -91,7 +92,7 @@ public function create()
 public function store(Request $request)
 {
     $data = $request->validate([
-        'search_patient'       => 'required|string',
+        'search_patient'       => 'required|exists:patients,patient_id',
         'doctor_id'            => 'required|exists:doctors,doctor_id',
         'charges'              => 'required|array|min:1',
         'charges.*.service_id' => 'required|exists:hospital_services,service_id',
@@ -99,37 +100,32 @@ public function store(Request $request)
         'notes'                => 'nullable|string',
     ]);
 
-    $user    = Auth::user();
+    $patient = Patient::findOrFail($data['search_patient']);
     $doctor  = Doctor::findOrFail($data['doctor_id']);
-    $patient = Patient::where('patient_id', $data['search_patient'])
-                      ->firstOrFail();
+    $user    = Auth::user();
 
-    // 1️⃣ Find or create today's Bill
-    $bill = \App\Models\Bill::firstOrCreate(
-        [
-          'patient_id'   => $patient->patient_id,
-          'billing_date' => now()->toDateString(),
-        ],
-        ['payment_status' => 'pending']
-    );
+    // 1) Bill per day
+    $bill = \App\Models\Bill::firstOrCreate([
+        'patient_id'   => $patient->patient_id,
+        'billing_date' => now()->toDateString(),
+    ], ['payment_status'=>'pending']);
 
-    $assignments = [];
-
+    $created = [];
     foreach ($data['charges'] as $row) {
         $service = HospitalService::findOrFail($row['service_id']);
         $amount  = $row['amount'];
 
-        // 2️⃣ Create the BillItem
+        // a) BillItem
         $billItem = \App\Models\BillItem::create([
-            'billing_id'    => $bill->billing_id,
-            'service_id'    => $service->service_id,
-            'quantity'      => 1,
-            'amount'        => $amount,
-            'billing_date'  => $bill->billing_date,
+            'billing_id'   => $bill->billing_id,
+            'service_id'   => $service->service_id,
+            'quantity'     => 1,
+            'amount'       => $amount,
+            'billing_date' => $bill->billing_date,
         ]);
 
-        // 3️⃣ Queue the ServiceAssignment
-        $assignments[] = [
+        // b) Assignment
+        $assignment = ServiceAssignment::create([
             'patient_id'     => $patient->patient_id,
             'doctor_id'      => $doctor->doctor_id,
             'service_id'     => $service->service_id,
@@ -139,9 +135,9 @@ public function store(Request $request)
             'bill_item_id'   => $billItem->billing_item_id,
             'created_at'     => now(),
             'updated_at'     => now(),
-        ];
+        ]);
 
-        // 4️⃣ Write the AuditLog
+        // c) Audit log
         \App\Models\AuditLog::create([
             'bill_item_id' => $billItem->billing_item_id,
             'action'       => 'create',
@@ -149,18 +145,15 @@ public function store(Request $request)
             'actor'        => $user->username,
             'icon'         => 'fa-vials',
         ]);
-    }
 
-    // bulk‐insert assignments
-    ServiceAssignment::insert($assignments);
+        // d) Notify the patient
+        $assignment->patient->notify(new LabChargeCreated($assignment));
+    }
 
     return redirect()
         ->route('laboratory.queue')
-        ->with('success', 'Lab charges have been successfully created.');
+        ->with('success','Lab charges have been successfully created.');
 }
-
-
-
 // Show the details for a ServiceAssignment
 public function show(ServiceAssignment $assignment)
 {
@@ -173,10 +166,14 @@ public function markCompleted(ServiceAssignment $assignment)
     $assignment->service_status = 'completed';
     $assignment->save();
 
+    // notify patient that their lab is complete
+    $assignment->patient->notify(new LabChargeCompleted($assignment));
+
     return redirect()
         ->route('laboratory.details', $assignment)
-        ->with('success', 'Request marked as completed.');
+        ->with('success','Request marked as completed.');
 }
+
 
 
  public function showRequest(ServiceAssignment $request)

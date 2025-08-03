@@ -118,18 +118,17 @@ $billRows = Bill::with([
     'items.service.department',
     'items.logs',   // ← load the logs collection
 ])
-->where('patient_id', $patient->patient_id)
-->when($admissionId, fn($q) => $q->where('admission_id', $admissionId))
+->where('patient_id',$patient->patient_id)
+->when($admissionId,fn($q)=>$q->where('b.admission_id',$admissionId))
 ->get()
 ->flatMap(function ($bill) {
     return $bill->items->map(function ($it) use ($bill) {
-        // now you can read $it->logs which is a Collection of AuditLog models
-        $timeline = $it->logs->map(fn($l) => (object)[
+        $timeline = $it->logs->map(fn($l)=> (object)[
             'stamp' => $l->created_at,
             'actor' => $l->actor,
+            'dept'  => $it->service?->department?->department_name ?? '—',   // 👈 NEW
             'text'  => $l->message,
         ]);
-
         return (object)[
             'billing_item_id' => $it->billing_item_id,
             'billing_date'    => $bill->billing_date,
@@ -145,24 +144,25 @@ $billRows = Bill::with([
 
 /* ---------- b) Service-assignment rows ---------- */
 $assignmentRows = ServiceAssignment::with(['service.department','doctor'])
-    ->where('patient_id', $patient->patient_id)
-    ->get()
-    ->map(function ($as) {
-        // synthetic two-step timeline (created → completed)
-        $timeline = collect([
-            (object)[
-                'stamp' => $as->created_at,
+->where('patient_id',$patient->patient_id)
+->get()
+->map(function ($as) {
+    $timeline = collect([
+        (object)[
+            'stamp' => $as->created_at,
+            'actor' => optional($as->doctor)->doctor_name ?? '—',
+            'dept'  => optional($as->doctor->department)->department_name ?? '—', // 👈 NEW
+            'text'  => 'Ordered',
+        ],
+        $as->service_status === 'completed'
+            ? (object)[
+                'stamp' => $as->updated_at,
                 'actor' => optional($as->doctor)->doctor_name ?? '—',
-                'text'  => 'Ordered',
-            ],
-            $as->service_status === 'completed'
-                ? (object)[
-                    'stamp' => $as->updated_at,
-                    'actor' => optional($as->doctor)->doctor_name ?? '—',
-                    'text'  => 'Marked completed',
-                  ]
-                : null,
-        ])->filter();
+                'dept'  => optional($as->doctor->department)->department_name ?? '—', // 👈 NEW
+                'text'  => 'Marked completed',
+              ]
+            : null,
+    ])->filter();
 
         return (object)[
             'billing_item_id' => 'SA-'.$as->assignment_id,
@@ -195,6 +195,7 @@ $rxRows = PharmacyCharge::with('items.service')
                     (object)[
                         'stamp' => $rx->created_at,
                         'actor' => 'Pharmacy',
+                        'dept'  => 'Pharmacy',                  // 👈 NEW
                         'text'  => 'Dispensed',
                     ],
                 ]),
@@ -203,35 +204,46 @@ $rxRows = PharmacyCharge::with('items.service')
     });
 
 
-        // 4️⃣ Merge – filter – collapse – paginate -----------------------
+     // 4️⃣ Merge – filter – collapse – paginate -----------------------
 
-        $rows = collect()
-            ->concat($billRows)
-            ->concat($assignmentRows)
-            ->concat($rxRows);
+$rows = collect()
+->concat($billRows)
+->concat($assignmentRows)
+->concat($rxRows);
 
-        if ($q = $request->input('q')) {
-            $rows = $rows->filter(fn($r) =>
-                str_contains(strtolower($r->description), strtolower($q))
-            );
-        }
+// only collapse non-pharmacy rows by ref/provider; keep each RX item separate
+$rows = $rows->groupBy(function($r) {
+// our $rxRows objects all set ->is_rx = true
+if (!empty($r->is_rx)) {
+    // group by the unique item id → no collapsing
+    return $r->billing_item_id;
+}
+// everything else: collapse by ref/provider
+return $r->ref_no.'|'.$r->provider;
+})
+->map(function($grp) {
+$first = $grp->first();
+$count = $grp->count();
 
-        // Collapse identical ref/provider combos
-        $rows = $rows->groupBy(fn($r) => $r->ref_no . '|' . $r->provider)
-            ->map(function ($grp) {
-                $first = $grp->first();
-                return (object)[
-                    'billing_date' => $grp->min('billing_date'),
-                    'ref_no'       => $first->ref_no,
-                    'description'  => $grp->count() === 1 ? $first->description : $grp->count() . ' items',
-                    'provider'     => $first->provider,
-                    'amount'       => $grp->sum('amount'),
-                    'status'       => $grp->pluck('status')->unique()->count() === 1
-                        ? $first->status : 'mixed',
-                    'children'     => $grp->values(),
-                ];
-            })
-            ->values();
+return (object)[
+    'billing_date' => $grp->min('billing_date'),
+    'ref_no'       => $first->ref_no,
+    'description'  => $count === 1
+                        ? $first->description
+                        : "{$count} items",
+    'provider'     => $first->provider,
+    'amount'       => $grp->sum('amount'),
+    'status'       => $grp->pluck('status')->unique()->count() === 1
+                        ? $first->status
+                        : 'mixed',
+    'children'     => $grp->values(),
+    // if you rely on a top‐level billing_item_id in the view, you can set it here:
+    'billing_item_id' => $first->billing_item_id,
+    // preserve is_rx if you use it later
+    'is_rx'        => $first->is_rx ?? false,
+];
+})
+->values();
 
         // Simple LengthAwarePaginator
         $perPage = 10;
@@ -252,7 +264,8 @@ $rxRows = PharmacyCharge::with('items.service')
             'totals'        => $totals,
             'bedRate'       => $bedRate,
             'doctorFee'     => $doctorFee,
-            'pharmacyTotal' => $rxTotal,   // raw RX total for the header
+            'pharmacyTotal' => $rxTotal,  
+            'paymentsMade'  => $paymentsMade,
         ]);
     }
 

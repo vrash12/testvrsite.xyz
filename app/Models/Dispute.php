@@ -1,20 +1,19 @@
 <?php
-// app/Models/Dispute.php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;   // ← add this
-use App\Models\BillItem;
-use App\Models\Patient;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;  // ← add this
 
 class Dispute extends Model
 {
+    protected $table      = 'disputes';
     protected $primaryKey = 'dispute_id';
-    public $timestamps    = false;
+    public    $timestamps = false;
 
     protected $fillable = [
-        'billing_item_id',
+        'disputable_id',
+        'disputable_type',
         'patient_id',
         'datetime',
         'reason',
@@ -22,12 +21,16 @@ class Dispute extends Model
         'approved_by',
     ];
 
+    protected $casts = [
+        'datetime' => 'datetime',
+    ];
+
     public function billItem(): BelongsTo
     {
         return $this->belongsTo(
             BillItem::class,
-            'billing_item_id',
-            'billing_item_id'
+            'bill_item_id',       // FK on disputes table
+            'billing_item_id'     // PK on bill_items table
         );
     }
 
@@ -38,5 +41,12 @@ class Dispute extends Model
             'patient_id',
             'patient_id'
         );
+    }
+
+    public function disputable(): MorphTo
+    {
+        // You can optionally be explicit about the column names:
+        // return $this->morphTo(__FUNCTION__, 'disputable_type', 'disputable_id');
+        return $this->morphTo();
     }
 }

@@ -27,6 +27,8 @@ use App\Models\PharmacyCharge;
 use Carbon\Carbon;
 use App\Http\Controllers\PatientNotificationController;
 use App\Models\PrescriptionItem;
+use App\Models\Service;
+use App\Notifications\AdmissionCharged;
 
 class PatientController extends Controller
 {
@@ -166,54 +168,59 @@ public function edit(Patient $patient)
 public function store(Request $request)
 {
     $data = $request->validate([
-        'patient_first_name'    => 'required|string|max:100',
-        'patient_last_name'     => 'required|string|max:100',
-        'patient_birthday'      => 'nullable|date',
-        'civil_status'          => 'nullable|string|max:50',
-        'phone_number'          => 'nullable|string|max:20',
-        'address'               => 'nullable|string',
-        'sex'                   => 'required|in:Male,Female',
-        'primary_reason'        => 'nullable|string',
-        'weight'                => 'nullable|numeric',
-        'height'                => 'nullable|numeric',
-        'temperature'           => 'nullable|numeric',
-        'blood_pressure'        => 'nullable|string',
-        'heart_rate'            => 'nullable|integer',
-        'history_others'        => 'nullable|string',
-        'allergy_others'        => 'nullable|string',
-        'admission_date'        => 'required|date',
-        'admission_type'        => 'required|string|max:50',
-        'admission_source'      => 'nullable|string|max:100',
-        'department_id'         => 'required|exists:departments,department_id',
-        'doctor_id'             => 'required|exists:doctors,doctor_id',
-        'room_id'               => 'required|exists:rooms,room_id',
-        'bed_id'                => 'nullable|exists:beds,bed_id',
-        'admission_notes'       => 'nullable|string',
-        'guarantor_name'        => 'required|string|max:100',
-        'guarantor_relationship'=> 'required|string|max:50',
-        'initial_deposit'       => 'nullable|numeric|min:0',
+        'patient_first_name'     => 'required|string|max:100',
+        'patient_last_name'      => 'required|string|max:100',
+        'patient_birthday'       => 'nullable|date',
+        'civil_status'           => 'nullable|string|max:50',
+        'phone_number'           => 'nullable|string|max:20',
+        'address'                => 'nullable|string',
+        'sex'                    => 'required|in:Male,Female',
+        'primary_reason'         => 'nullable|string',
+        'weight'                 => 'nullable|numeric',
+        'height'                 => 'nullable|numeric',
+        'temperature'            => 'nullable|numeric',
+        'blood_pressure'         => 'nullable|string',
+        'heart_rate'             => 'nullable|integer',
+        'history_others'         => 'nullable|string',
+        'allergy_others'         => 'nullable|string',
+        'admission_date'         => 'required|date',
+        'admission_type'         => 'required|string|max:50',
+        'admission_source'       => 'nullable|string|max:100',
+        'department_id'          => 'required|exists:departments,department_id',
+        'doctor_id'              => 'required|exists:doctors,doctor_id',
+        'room_id'                => 'required|exists:rooms,room_id',
+        'bed_id'                 => 'nullable|exists:beds,bed_id',
+        'admission_notes'        => 'nullable|string',
+        'guarantor_name'         => 'required|string|max:100',
+        'guarantor_relationship' => 'required|string|max:50',
+        'initial_deposit'        => 'nullable|numeric|min:0',
     ]);
 
-    $base = strtolower(substr($data['patient_first_name'],0,1) . substr($data['patient_last_name'],0,1));
-    $latest = Patient::where('email','like',"$base.%@patientcare.com")->orderByDesc('email')->first();
-    $seq = ($latest && preg_match('/\.(\d{3})@/',$latest->email,$m)) ? intval($m[1]) + 1 : 1;
-    $generatedEmail = "{$base}." . str_pad($seq,3,'0',STR_PAD_LEFT) . "@patientcare.com";
-    $plainPassword = 'password';
+    /* ------------- generate unique email & default password ------------- */
+    $base  = strtolower(substr($data['patient_first_name'],0,1) . substr($data['patient_last_name'],0,1));
+    $last  = Patient::where('email','like',"$base.%@patientcare.com")->orderByDesc('email')->first();
+    $seq   = ($last && preg_match('/\.(\d{3})@/',$last->email,$m)) ? intval($m[1])+1 : 1;
+    $email = "{$base}." . str_pad($seq,3,'0',STR_PAD_LEFT) . "@patientcare.com";
+    $pwd   = 'password';
 
-    $patient = DB::transaction(function() use ($data, $generatedEmail, $plainPassword, $request) {
+    /* ------------------- wrap everything in a transaction ---------------- */
+    $patient = DB::transaction(function() use ($data,$email,$pwd,$request) {
+
+        /* 1️⃣  PATIENT */
         $p = Patient::create([
             'patient_first_name' => $data['patient_first_name'],
             'patient_last_name'  => $data['patient_last_name'],
             'sex'                => $data['sex'],
             'patient_birthday'   => $data['patient_birthday'],
             'civil_status'       => $data['civil_status'],
-            'email'              => $generatedEmail,
+            'email'              => $email,
             'phone_number'       => $data['phone_number'],
             'address'            => $data['address'],
-            'password'           => $plainPassword,
+            'password'           => $pwd,          // hashed by mutator
             'status'             => 'active',
         ]);
 
+        /* 2️⃣  MEDICAL DETAILS */
         $p->medicalDetail()->create([
             'primary_reason'  => $data['primary_reason'],
             'weight'          => $data['weight'],
@@ -241,11 +248,12 @@ public function store(Request $request)
             ]),
         ]);
 
+        /* 3️⃣  ADMISSION */
         $room = Room::findOrFail($data['room_id']);
         $bed  = $data['bed_id'] ? Bed::findOrFail($data['bed_id']) : null;
-        $admission = $p->admissionDetail()->create([
-'admission_date'  => now(), 
 
+        $admission = $p->admissionDetail()->create([
+            'admission_date'  => now(),
             'admission_type'  => $data['admission_type'],
             'admission_source'=> $data['admission_source'] ?? '',
             'department_id'   => $data['department_id'],
@@ -255,13 +263,11 @@ public function store(Request $request)
             'admission_notes' => $data['admission_notes'],
         ]);
 
-        if ($data['bed_id']) {
-            Bed::where('bed_id', $data['bed_id'])->update([
-                'patient_id' => $p->patient_id,
-                'status'     => 'occupied',
-            ]);
+        if ($bed) {
+            $bed->update(['patient_id'=>$p->patient_id,'status'=>'occupied']);
         }
 
+        /* 4️⃣  BILLING INFORMATION */
         $p->billingInformation()->create([
             'payment_method_id'      => 1,
             'guarantor_name'         => $data['guarantor_name'],
@@ -269,31 +275,11 @@ public function store(Request $request)
             'payment_status'         => 'pending',
         ]);
 
-        if (! empty($data['initial_deposit'])) {
-            $bill = $p->bills()->create([
-                'billing_date'   => now(),
-                'payment_status' => 'partial',
-                'admission_id'   => $admission->admission_id,
-            ]);
-
-            $billItem = $bill->items()->create([
-                'amount'          => $data['initial_deposit'],
-                'billing_date'    => now(),
-                'discount_amount' => 0,
-            ]);
-
-            $p->user->notify(new AdmissionCharged(
-                optional($bed)->rate ?? 0,
-                $room->rate,
-                optional(Doctor::find($data['doctor_id']))->rate ?? 0,
-                $billItem->billing_item_id
-            ));
-        }
-
-        $p->user()->create([
-            'username'      => Str::before($generatedEmail,'@'),
-            'email'         => $generatedEmail,
-            'password'      => $plainPassword,
+        /* 5️⃣  CREATE USER FIRST! */
+        $newUser = $p->user()->create([
+            'username'      => Str::before($email,'@'),
+            'email'         => $email,
+            'password'      => $pwd,
             'role'          => 'patient',
             'department_id' => $data['department_id'],
             'room_id'       => $data['room_id'],
@@ -301,14 +287,38 @@ public function store(Request $request)
             'doctor_id'     => $data['doctor_id'],
         ]);
 
+        /* 6️⃣  OPTIONAL INITIAL DEPOSIT & NOTIFY  */
+        if (!empty($data['initial_deposit'])) {
+
+            $bill = $p->bills()->create([
+                'billing_date'   => now(),
+                'payment_status' => 'partial',
+                'admission_id'   => $admission->admission_id,
+            ]);
+
+            $item = $bill->items()->create([
+                'amount'          => $data['initial_deposit'],
+                'billing_date'    => now(),
+                'discount_amount' => 0,
+            ]);
+
+            // now we have a real user instance → safe to notify
+            $newUser->notify(new AdmissionCharged(
+                optional($bed)->rate ?? 0,
+                $room->rate,
+                optional(Doctor::find($data['doctor_id']))->rate ?? 0,
+                $item->billing_item_id
+            ));
+        }
+
         return $p;
     });
 
     return redirect()
         ->route('admission.patients.show', $patient->patient_id)
         ->with([
-            'generatedEmail' => $generatedEmail,
-            'plainPassword'  => $plainPassword,
+            'generatedEmail' => $email,
+            'plainPassword'  => 'password',
             'success'        => 'Patient admitted successfully.',
         ]);
 }

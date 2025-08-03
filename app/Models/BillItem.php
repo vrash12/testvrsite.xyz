@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class BillItem extends Model
 {
@@ -15,7 +18,10 @@ class BillItem extends Model
     protected $casts = [
         'billing_date' => 'date',
     ];
-
+    public function disputes(): MorphMany
+    {
+        return $this->morphMany(Dispute::class, 'disputable');
+    }
     /** The parent Bill */
     public function bill(): BelongsTo
     {
@@ -42,10 +48,12 @@ class BillItem extends Model
     {
         return $this->hasMany(AuditLog::class, 'bill_item_id', 'billing_item_id');
     }
-    public function dispute()               // ← one-to-one
-{
-    return $this->hasOne(Dispute::class, 'billing_item_id', 'billing_item_id');
-}
+    public function dispute(): MorphOne
+    {
+        return $this->morphOne(Dispute::class, 'disputable');
+    }
+
+    
 
   public function getRouteKeyName()
     {

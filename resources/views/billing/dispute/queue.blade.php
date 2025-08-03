@@ -1,3 +1,4 @@
+{{-- resources/views/billing/dispute/queue.blade.php --}}
 @extends('layouts.billing')
 
 @section('content')
@@ -54,51 +55,42 @@
             </tr>
           </thead>
           <tbody>
-            @forelse($disputes as $dispute)
-              <tr>
-                <td>{{ $loop->iteration + ($disputes->currentPage()-1)*$disputes->perPage() }}</td>
-            <td>
-  <div class="fw-semibold">
-    {{ optional($dispute->patient)->patient_first_name }} 
-    {{ optional($dispute->patient)->patient_last_name }}
-  </div>
-  <small class="text-muted">
-    ID: {{ str_pad(optional($dispute->patient)->patient_id, 8, '0', STR_PAD_LEFT) }}
-  </small>
-</td>
-
-                <td>{{ $dispute->reason }}</td>
-                <td>
-                <span class="badge bg-info">
-  {{
-    optional(
-      optional(
-        optional($dispute->billItem)->service
-      )->department
-    )->department_name
-    ?? '—'
-  }}
-</span>
-
-
-                </td>
-                <td class="text-end text-danger">
-  ₱{{ number_format(optional($dispute->billItem)->amount ?? 0, 2) }}
-</td>
-
-                <td class="text-center">
-                  <a href="{{ route('billing.dispute.show', $dispute) }}"
-                     class="btn btn-sm btn-outline-success">
-                    <i class="fa-solid fa-expand me-1"></i> Review
-                  </a>
-                </td>
-              </tr>
-            @empty
-              <tr>
-                <td colspan="6" class="text-center text-muted">No disputes found.</td>
-              </tr>
-            @endforelse
-          </tbody>
+    @forelse($disputes as $dispute)
+      <tr>
+        <td>{{ $loop->iteration + ($disputes->currentPage()-1)*$disputes->perPage() }}</td>
+        <td>
+          <div class="fw-semibold">
+            {{ optional($dispute->patient)->patient_first_name }}
+            {{ optional($dispute->patient)->patient_last_name }}
+          </div>
+          <small class="text-muted">
+            ID: {{ str_pad(optional($dispute->patient)->patient_id, 8, '0', STR_PAD_LEFT) }}
+          </small>
+        </td>
+        <td>{{ Str::limit($dispute->reason, 40) }}</td>
+        <td>
+          {{-- ✅ FIX: Use the new 'disputable' relationship --}}
+          <span class="badge bg-info">
+            {{ $dispute->disputable->service->department->department_name ?? 'N/A' }}
+          </span>
+        </td>
+        <td class="text-end text-danger">
+          {{-- ✅ FIX: Check for 'amount' or 'total' property --}}
+          ₱{{ number_format($dispute->disputable->amount ?? $dispute->disputable->total ?? 0, 2) }}
+        </td>
+        <td class="text-center">
+          <a href="{{ route('billing.dispute.show', $dispute) }}"
+             class="btn btn-sm btn-outline-success">
+            <i class="fa-solid fa-expand me-1"></i> Review
+          </a>
+        </td>
+      </tr>
+    @empty
+      <tr>
+        <td colspan="6" class="text-center text-muted">No disputes found.</td>
+      </tr>
+    @endforelse
+</tbody>
         </table>
       </div>
 

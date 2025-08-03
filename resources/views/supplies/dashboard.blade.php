@@ -120,8 +120,7 @@
                           data-bs-toggle="modal" data-bs-target="#itemModal">
                     <i class="fa fa-pen"></i>
                   </button>
-                  <form action="{{ route('items.destroy', $svc) }}"
-                        method="POST" class="d-inline">
+                <form action="{{ route('supplies.items.destroy', $svc) }}" method="POST" class="d-inline">
                     @csrf
                     @method('DELETE')
                     <button class="btn btn-outline-danger btn-sm"
@@ -194,7 +193,7 @@
 
   // Add
   document.getElementById('newItemBtn').addEventListener('click', () => {
-    form.action = "{{ route('items.store') }}";
+    form.action = "{{ route('supplies.items.store') }}";
     form.method = "POST";
     title.textContent = 'Add Item';
     submitBtn.textContent = 'Add';

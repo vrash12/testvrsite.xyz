@@ -51,9 +51,12 @@ class Patient extends Authenticatable
 {
     return $this->hasOne(User::class, 'patient_id');
 }
-    protected $casts = [
-        'patient_birthday' => 'date',
-    ];
+protected $casts = [
+    'patient_birthday'  => 'date',
+    'birthday'          => 'date',
+    'billing_closed_at' => 'datetime', // This is the important line
+
+];
 
   public function medicalDetail(): HasOne
     {

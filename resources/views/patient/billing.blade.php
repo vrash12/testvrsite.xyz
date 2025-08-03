@@ -13,7 +13,6 @@
           Welcome! Here you can monitor an itemized version of your bill.
         </small>
       </div>
-     
     </div>
 
     {{-- Info banner --}}
@@ -33,6 +32,7 @@
         ['label'=>'Bed/Room Rate','value'=>$bedRate],
         ['label'=>'Doctor Fee','value'=>$doctorFee],
         ['label'=>'Pharmacy Charges','value'=>$pharmacyTotal],
+        ['label'=>'Deposits Paid','value'=>$paymentsMade],  {{-- NEW: show deposits --}}
       ] as $tile)
         <div class="col-md-4">
           <div class="bg-light rounded p-3 h-100">
@@ -79,12 +79,13 @@
         </thead>
         <tbody>
         @forelse($items as $row)
-          @php
-            $badge = [
-              'complete'=>'success','completed'=>'success',
-              'pending'=>'warning','disputed'=>'danger','mixed'=>'secondary'
-            ][$row->status] ?? 'secondary';
-          @endphp
+  @php
+    $itemId = data_get($row, 'billing_item_id', optional($row->children->first())->billing_item_id);
+    $badge  = [
+      'complete'=>'success','completed'=>'success',
+      'pending'=>'warning','disputed'=>'danger','mixed'=>'secondary',
+    ][$row->status] ?? 'secondary';
+  @endphp
           <tr>
             <td>{{ \Carbon\Carbon::parse($row->billing_date)->format('Y-m-d') }}</td>
             <td>{{ $row->ref_no }}</td>
@@ -93,7 +94,6 @@
             <td class="text-end">₱{{ number_format($row->amount,2) }}</td>
             <td><span class="badge bg-{{ $badge }} text-capitalize">{{ $row->status }}</span></td>
             <td class="text-center">
-              {{-- THIS one now opens the modal --}}
               <button type="button"
         class="btn btn-outline-secondary btn-sm btn-details"
         data-bs-toggle="modal"
@@ -103,20 +103,23 @@
         data-timeline='@json($row->children->flatMap(fn($c)=>$c->timeline)->sortBy("stamp")->values())'>
   Details
 </button>
-
-              <button type="button"
-                      class="btn btn-outline-danger btn-sm btn-dispute"
-                      data-bs-toggle="modal"
-                      data-bs-target="#disputeModal"
-                      data-item-id="{{ $row->billing_item_id ?? '' }}"
-                      data-date="{{ \Carbon\Carbon::parse($row->billing_date)->format('Y-m-d') }}"
-                      data-time="{{ \Carbon\Carbon::parse($row->billing_date)->format('h:ia') }}"
-                      data-ref="{{ $row->ref_no }}"
-                      data-description="{{ $row->description }}"
-                      data-provider="{{ $row->provider }}"
-                      data-amount="₱{{ number_format($row->amount,2) }}">
-                Request Review
-              </button>
+@if($itemId)
+        <button type="button"
+                class="btn btn-outline-danger btn-sm btn-dispute"
+                data-bs-toggle="modal"
+                data-bs-target="#disputeModal"
+                data-item-id="{{ $itemId }}"
+                data-date="{{ \Carbon\Carbon::parse($row->billing_date)->format('Y-m-d') }}"
+                data-time="{{ \Carbon\Carbon::parse($row->billing_date)->format('h:ia') }}"
+                data-ref="{{ $row->ref_no }}"
+                data-description="{{ $row->description }}"
+                data-provider="{{ $row->provider }}"
+                data-amount="₱{{ number_format($row->amount,2) }}">
+          Request Review
+        </button>
+      @else
+      <span class="text-muted">No details available</span>
+      @endif
             </td>
           </tr>
         @empty
@@ -137,6 +140,8 @@
     </div>
   </div>
 </div>
+
+
 
 {{-- DISPUTE MODAL --}}
 <div class="modal fade" id="disputeModal" tabindex="-1" aria-hidden="true">
@@ -294,7 +299,8 @@ const auditHtml = timeline.map(t => `
   <li class="list-group-item d-flex justify-content-between">
     <div>
       <i class="fas fa-circle-notch me-2 text-primary"></i>
-      <strong>${t.actor}</strong> – ${t.text}
+      <strong>${t.actor}</strong>
+      <small class="text-muted">(${t.dept})</small> – ${t.text}
     </div>
     <small class="text-muted">
       ${new Date(t.stamp).toLocaleString()}
